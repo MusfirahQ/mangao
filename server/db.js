@@ -5,9 +5,19 @@
 
 let queryFn = null;
 
+// Vercel's Neon integration may add a prefix to the variable names (e.g. Mangao_DATABASE_URL).
+function databaseUrl() {
+  const env = process.env;
+  if (env.DATABASE_URL) return env.DATABASE_URL;
+  if (env.POSTGRES_URL) return env.POSTGRES_URL;
+  const key = Object.keys(env).find((k) => k.endsWith('_DATABASE_URL'))
+    || Object.keys(env).find((k) => k.endsWith('_POSTGRES_URL'));
+  return key ? env[key] : '';
+}
+
 export async function getQuery() {
   if (queryFn) return queryFn;
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const url = databaseUrl();
   if (url) {
     const { neon } = await import('@neondatabase/serverless');
     const sql = neon(url);
