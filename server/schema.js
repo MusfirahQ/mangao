@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { q, one } from './db.js';
 import { hashPassword } from './auth.js';
+import { coordsFor } from './geo.js';
 
 const catalog = JSON.parse(readFileSync(new URL('./catalog.json', import.meta.url), 'utf8'));
 
@@ -137,6 +138,17 @@ const TABLES = [
     body TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  // map + live rider tracking
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`,
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS dest_lat DOUBLE PRECISION`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS dest_lng DOUBLE PRECISION`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_token TEXT`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_lat DOUBLE PRECISION`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_lng DOUBLE PRECISION`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_accuracy REAL`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_at TIMESTAMPTZ`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS orders_rider_token_idx ON orders(rider_token)`,
   `CREATE INDEX IF NOT EXISTS orders_user_idx ON orders(user_id)`,
   `CREATE INDEX IF NOT EXISTS orders_store_idx ON orders(store_id)`,
   `CREATE INDEX IF NOT EXISTS items_order_idx ON order_items(order_id)`,
@@ -173,6 +185,15 @@ async function seedCatalog() {
      VALUES ${values.join(',')} ON CONFLICT (id) DO NOTHING`,
     params
   );
+}
+
+// Give every store a map position (stores added before maps existed get one too).
+async function placeStores() {
+  const rows = await q('SELECT id, area FROM stores WHERE lat IS NULL OR lng IS NULL');
+  for (const r of rows) {
+    const [lat, lng] = coordsFor(r.area);
+    await q('UPDATE stores SET lat = $1, lng = $2 WHERE id = $3', [lat, lng, r.id]);
+  }
 }
 
 async function seedAccounts() {
@@ -215,6 +236,7 @@ export function ensureReady() {
     ready = (async () => {
       for (const sql of TABLES) await q(sql);
       await seedCatalog();
+      await placeStores();
       await seedAccounts();
     })().catch((err) => {
       ready = null; // retry on the next request

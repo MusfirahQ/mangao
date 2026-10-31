@@ -9,6 +9,7 @@
   <link rel="icon" href="assets/mangi.svg" type="image/svg+xml">
   <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -682,6 +683,13 @@
       </div>
     </section>
 
+    <!-- ============================ RIDER (live location sharing) ============================ -->
+    <section class="view" data-view="rider" aria-labelledby="riderTitle" hidden>
+      <div class="container-xl page-pad narrow">
+        <div id="riderBody"></div>
+      </div>
+    </section>
+
     <!-- ============================ NOT FOUND ============================ -->
     <section class="view" data-view="notfound" aria-labelledby="nfTitle" hidden>
       <div class="container-xl page-pad">
@@ -802,6 +810,7 @@
   <div class="visually-hidden" id="liveRegion" aria-live="polite" aria-atomic="true"></div>
 
   <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="vendor/leaflet/leaflet.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

@@ -776,3 +776,25 @@ html[data-theme="dark"] .m-toast { background: #2E3034; border: 1px solid #44474
 }
 html[data-theme="dark"] .closed-pill, html[data-theme="dark"] .status-tag.stopped { background: #3A1E1C; color: #FFB4AB; border-color: #5A2A26 !important; }
 html[data-theme="dark"] .sim-badge.live { background: #1F3326; color: #A9DDBC; border-color: #2D4A37; }
+
+/* ---------- live map ---------- */
+.map-panel { padding: var(--s-4); }
+.map-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-3); }
+.map-status { font-size: .86rem; color: var(--text-2); font-weight: 500; }
+.track-map { height: 340px; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); background: var(--surface-2); z-index: 0; margin-bottom: 8px; }
+.leaflet-container { font-family: var(--font-body); }
+.map-pin { display: flex !important; align-items: center; justify-content: center; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); color: #fff; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0,0,0,.25); border: 3px solid #fff; }
+.map-pin i { transform: rotate(45deg); }
+.pin-store { background: var(--charcoal); }
+.pin-home { background: var(--mango-deep); }
+.pin-rider { border-radius: 50%; transform: none; background: #2E9D5B; font-size: 1.25rem; position: relative; }
+.pin-rider i { transform: none; position: relative; z-index: 1; }
+.rider-pulse { position: absolute; inset: -6px; border-radius: 50%; background: rgba(46,157,91,.35); animation: riderPulse 1.8s ease-out infinite; }
+@keyframes riderPulse { from { transform: scale(.7); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+.rider-link-box { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background: #EAF5EE; border: 1px solid #CFE6D7; color: #1F5136; border-radius: var(--r-sm); padding: 8px 10px; font-size: .84rem; margin-top: 8px; }
+.rider-share { display: flex; justify-content: space-between; align-items: center; gap: var(--s-4); flex-wrap: wrap; border-color: var(--mango); background: var(--cream); color: var(--charcoal); }
+.rider-share .panel-title, .rider-share p { color: var(--charcoal); }
+.rider-share.on { background: #EAF5EE; border-color: #2E9D5B; }
+html[data-theme="dark"] .rider-link-box, html[data-theme="dark"] .rider-share.on { background: #1F3326; color: #A9DDBC; border-color: #2D4A37; }
+html[data-theme="dark"] .rider-share.on .panel-title, html[data-theme="dark"] .rider-share.on p { color: #A9DDBC; }
+@media (max-width: 575.98px) { .track-map { height: 280px; } .rider-share .btn { width: 100%; } }

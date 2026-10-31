@@ -160,6 +160,9 @@ const ui = {
   lastCase: null,
   pollTimer: null,
   catalogLoaded: false,
+  trackMap: null,   // { map, riderMarker, accuracyCircle } on the tracking page
+  riderMap: null,   // same, on the rider page
+  rider: null,      // { token, order, watchId, lastSent, sending, wakeLock }
 };
 
 /* ------------------------------------------------------------------- api */
@@ -516,7 +519,7 @@ function refreshCartUI(bump = false) {
 
   // Mobile basket bar
   const bar = $('#basketBar');
-  const showBar = count > 0 && !['checkout', 'track', 'partner', 'admin', 'login'].includes(ui.route.name);
+  const showBar = count > 0 && !['checkout', 'track', 'partner', 'admin', 'login', 'rider'].includes(ui.route.name);
   bar.hidden = !showBar;
   document.body.classList.toggle('has-basket', showBar);
   $('#bbCount').textContent = count;
@@ -1136,6 +1139,70 @@ async function placeOrder() {
   }
 }
 
+/* ================================================================= MAPS */
+// Real map with OpenStreetMap tiles (Leaflet library). Markers are small HTML icons.
+const mapIcon = (cls, html) => L.divIcon({ className: `map-pin ${cls}`, html, iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -36] });
+const ICONS = {
+  store: () => mapIcon('pin-store', '<i class="bi bi-shop"></i>'),
+  home: () => mapIcon('pin-home', '<i class="bi bi-house-door-fill"></i>'),
+  rider: () => L.divIcon({ className: 'map-pin pin-rider', html: '<span class="rider-pulse"></span><i class="bi bi-bicycle"></i>', iconSize: [44, 44], iconAnchor: [22, 22] }),
+};
+
+/** Draw a map in `el` with the store, the delivery area and (if known) the rider. */
+function drawMap(el, { store, dest, rider, storeName }) {
+  if (typeof L === 'undefined' || !el) return null;
+  const map = L.map(el, { scrollWheelZoom: false, zoomControl: true, attributionControl: true });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map);
+  const pts = [];
+  if (store) { L.marker([store.lat, store.lng], { icon: ICONS.store(), title: storeName || 'Store' }).addTo(map).bindPopup(esc(storeName || 'Store')); pts.push([store.lat, store.lng]); }
+  if (dest) {
+    L.marker([dest.lat, dest.lng], { icon: ICONS.home(), title: 'Delivery area' }).addTo(map).bindPopup('Delivery area (approximate)');
+    L.circle([dest.lat, dest.lng], { radius: 700, color: '#F07824', weight: 1, fillOpacity: 0.08 }).addTo(map);
+    pts.push([dest.lat, dest.lng]);
+  }
+  if (store && dest) L.polyline([[store.lat, store.lng], [dest.lat, dest.lng]], { color: '#202124', weight: 2, dashArray: '6 8', opacity: 0.5 }).addTo(map);
+  const result = { map, riderMarker: null, accuracyCircle: null };
+  if (rider) pts.push([rider.lat, rider.lng]);
+  if (pts.length > 1) map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
+  else if (pts.length === 1) map.setView(pts[0], 14);
+  else map.setView([31.5204, 74.3587], 12);
+  if (rider) setRiderOnMap(result, rider); // after the view is set
+  // resize once the panel has its final size (skip if the page changed in the meantime)
+  setTimeout(() => { if (document.body.contains(el) && result.map === map) { try { map.invalidateSize(); } catch { /* map removed */ } } }, 50);
+  return result;
+}
+
+/** Move (or add) the rider marker. */
+function setRiderOnMap(m, rider, { follow = false } = {}) {
+  if (!m || !m.map || !rider) return;
+  const ll = [rider.lat, rider.lng];
+  if (!m.riderMarker) {
+    m.riderMarker = L.marker(ll, { icon: ICONS.rider(), title: 'Rider', zIndexOffset: 1000 }).addTo(m.map);
+    if (rider.accuracy) m.accuracyCircle = L.circle(ll, { radius: rider.accuracy, color: '#347A54', weight: 1, fillOpacity: 0.1 }).addTo(m.map);
+  } else {
+    m.riderMarker.setLatLng(ll);
+    if (m.accuracyCircle) m.accuracyCircle.setLatLng(ll).setRadius(rider.accuracy || 0);
+  }
+  if (follow) m.map.panTo(ll);
+  else if (!m.map.getBounds().contains(ll)) m.map.panTo(ll);
+}
+
+function destroyMap(key) {
+  if (!ui[key]) return;
+  const m = ui[key];
+  ui[key] = null;
+  try { m.map.stop(); m.map.remove(); } catch { /* container already gone */ }
+  m.map = null;
+}
+
+const agoText = (ts) => {
+  const s = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 1000));
+  return s < 5 ? 'just now' : s < 60 ? `${s} seconds ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : fmtTime(ts);
+};
+
 /* ===================================================== ORDERS & TRACKING */
 const itemsSummary = (o) => {
   const parts = o.items.map((i) => `${i.qty}× ${i.name}`);
@@ -1219,6 +1286,7 @@ function renderTrack(id) {
     return;
   }
   document.title = `Tracking ${o.id} — Mangao`;
+  destroyMap('trackMap');
   const flow = ORDER_FLOW[o.mode];
   const stopped = ['cancelled', 'rejected'].includes(o.status);
   const idx = flow.indexOf(o.status);
@@ -1241,6 +1309,11 @@ function renderTrack(id) {
         const cls = i < idx || o.status === flow[flow.length - 1] ? 'done' : i === idx ? 'current' : '';
         return `<li class="${cls}" ${i === idx ? 'aria-current="step"' : ''}><span class="dot" aria-hidden="true">${cls === 'done' ? '<i class="bi bi-check-lg"></i>' : i + 1}</span>${esc(STATUS_LABEL[s])}<span class="t">${esc(eventTime(s) || (i > idx ? 'Waiting' : ''))}</span></li>`;
       }).join('')}</ol>
+    </section>`}
+    ${stopped ? '' : `<section class="panel map-panel" aria-labelledby="mapTitle">
+      <div class="map-head"><h2 class="panel-title mb-0" id="mapTitle">${o.mode === 'pickup' ? 'Where to collect' : 'Live map'}</h2><span class="map-status" id="mapStatus">${esc(mapStatusText(o))}</span></div>
+      <div class="track-map" id="trackMap" role="img" aria-label="Map showing ${o.mode === 'pickup' ? 'the store' : 'the store, your delivery area and the rider'}"></div>
+      <p class="tiny-note mb-0">${o.mode === 'pickup' ? `${esc(o.storeName)}, ${esc(o.storeArea || '')}` : 'The house pin marks your area, not your exact address. The rider pin moves live while your order is on the way.'}</p>
     </section>`}
     <div class="d-flex flex-wrap gap-2 mb-3">
       ${o.status === 'placed' ? `<button type="button" class="btn btn-sm btn-outline-danger" data-action="cancel-order" data-oid="${esc(o.id)}">Cancel order</button>` : ''}
@@ -1275,6 +1348,20 @@ function renderTrack(id) {
         </ul>
       </section>
     </div>`;
+  if (!stopped) {
+    ui.trackMap = drawMap($('#trackMap'), {
+      store: o.storeLocation, storeName: o.storeName,
+      dest: o.mode === 'delivery' ? o.destination : null,
+      rider: o.status === 'on_the_way' ? o.rider : null,
+    });
+  }
+}
+
+function mapStatusText(o) {
+  if (o.mode === 'pickup') return o.status === 'ready' ? 'Ready to collect' : '';
+  if (o.status === 'on_the_way') return o.rider ? `Rider location · updated ${agoText(o.rider.at)}` : 'Waiting for the rider to share their location';
+  if (['delivered'].includes(o.status)) return 'Delivered';
+  return 'The rider appears here once your order is on its way';
 }
 
 /** Refresh one order from the server (used while the tracking page is open). */
@@ -1287,6 +1374,11 @@ async function refreshOrder(id) {
     if (changed && ui.route.name === 'track' && ui.route.params.id === id) {
       renderTrack(id);
       if (i !== -1 && state.settings.notifOrder) toast(`${res.order.storeName}: ${STATUS_LABEL[res.order.status]}`, { icon: 'bi-bell-fill' });
+    } else if (ui.route.name === 'track' && ui.route.params.id === id) {
+      // same status: just move the rider and update the "updated x ago" text
+      if (res.order.rider) setRiderOnMap(ui.trackMap, res.order.rider);
+      const st = $('#mapStatus');
+      if (st) st.textContent = mapStatusText(res.order);
     }
     updateActiveDot();
   } catch { /* keep showing the last known state */ }
@@ -1810,6 +1902,13 @@ function dashOrderCard(o, { showStore = false } = {}) {
     ${o.mode === 'delivery' ? `<p class="order-meta mb-1"><i class="bi bi-geo-alt" aria-hidden="true"></i> ${esc(o.address)}</p>` : ''}
     ${o.riderNote ? `<p class="order-meta mb-1"><i class="bi bi-chat-left-text" aria-hidden="true"></i> ${esc(o.riderNote)}</p>` : ''}
     ${o.notes ? `<p class="order-meta mb-1"><i class="bi bi-sticky" aria-hidden="true"></i> ${esc(o.notes)}</p>` : ''}
+    ${o.status === 'on_the_way' && o.riderToken ? `<div class="rider-link-box">
+      <span><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> ${o.rider ? `Rider sharing location · ${esc(agoText(o.rider.at))}` : 'Rider location not shared yet'}</span>
+      <span class="d-flex gap-1 flex-wrap">
+        <button type="button" class="btn btn-sm btn-outline-dark" data-action="copy-rider-link" data-token="${esc(o.riderToken)}"><i class="bi bi-link-45deg" aria-hidden="true"></i>Copy rider link</button>
+        <a class="btn btn-sm btn-outline-dark" href="#/rider/${esc(o.riderToken)}" target="_blank" rel="noopener"><i class="bi bi-phone" aria-hidden="true"></i>Open rider page</a>
+      </span>
+    </div>` : ''}
     <div class="order-actions mt-2">
       <span class="order-total">${rs(o.total)} <small class="text-body-secondary fw-normal">${esc(o.payment)}</small></span>
       <div class="btns">${orderActions(o)}</div>
@@ -2019,9 +2118,154 @@ async function loadAdminThread() {
   log.scrollTop = log.scrollHeight;
 }
 
+/* =============================================================== RIDER */
+// The rider opens a secret link from the store and shares their phone's GPS while delivering.
+async function renderRider(token) {
+  document.title = 'Rider — Mangao';
+  const body = $('#riderBody');
+  if (!ui.rider || ui.rider.token !== token) { stopSharing(); ui.rider = { token, order: null, watchId: null, lastSent: 0, sending: false, wakeLock: null, error: '' }; }
+  if (!ui.rider.order) body.innerHTML = loadingState('Loading delivery…');
+  try {
+    ui.rider.order = (await api(`/rider/${encodeURIComponent(token)}`)).order;
+  } catch (err) {
+    stopSharing();
+    body.innerHTML = emptyState({ mood: 'sad', title: 'This rider link is not valid', text: err.message });
+    return;
+  }
+  paintRider();
+}
+
+function paintRider() {
+  const r = ui.rider;
+  const o = r.order;
+  const active = o.status === 'on_the_way';
+  const sharing = r.watchId !== null;
+  if (!active) stopSharing();
+  destroyMap('riderMap');
+  $('#riderBody').innerHTML = `
+    <div class="track-head">
+      <div><p class="mb-1 text-body-secondary">Mangao rider</p><h1 id="riderTitle">Delivering order ${esc(o.id)}</h1><p class="page-sub">${esc(o.storeName)} → ${esc(o.contact.name)}</p></div>
+      <span class="status-tag ${statusClass(o.status)}">${esc(STATUS_LABEL[o.status])}</span>
+    </div>
+    ${active ? `<section class="panel rider-share ${sharing ? 'on' : ''}">
+      <div>
+        <h2 class="panel-title mb-1">${sharing ? 'Sharing your live location' : 'Share your live location'}</h2>
+        <p class="mb-0 small" id="riderShareStatus">${sharing ? esc(riderStatusText()) : 'The customer will see you moving on their map. Keep this page open while you deliver.'}</p>
+        ${r.error ? `<p class="text-danger small mb-0 mt-1">${esc(r.error)}</p>` : ''}
+      </div>
+      <button type="button" class="btn ${sharing ? 'btn-outline-dark' : 'btn-mango'} btn-lg" data-action="${sharing ? 'stop-sharing' : 'start-sharing'}">${sharing ? '<i class="bi bi-pause-fill"></i> Stop sharing' : '<i class="bi bi-broadcast"></i> Start sharing'}</button>
+    </section>` : `<section class="panel"><p class="mb-0">${o.status === 'delivered' ? 'This order has been delivered. Thank you!' : 'This order is not out for delivery, so location sharing is off.'}</p></section>`}
+    <section class="panel map-panel">
+      <div class="track-map" id="riderMap" role="img" aria-label="Map with the store, the delivery area and your position"></div>
+    </section>
+    <section class="panel">
+      <h2 class="panel-title">Delivery details</h2>
+      <dl class="kv">
+        <dt>Customer</dt><dd>${esc(o.contact.name)}</dd>
+        <dt>Phone</dt><dd>${o.contact.phone ? `<a href="tel:${esc(o.contact.phone)}">${esc(o.contact.phone)}</a>` : '—'}</dd>
+        <dt>Address</dt><dd>${esc(o.address)}</dd>
+        ${o.riderNote ? `<dt>Note</dt><dd>${esc(o.riderNote)}</dd>` : ''}
+        <dt>Collect</dt><dd>${o.payment === 'Cash' ? `${rs(o.total)} in cash` : 'Nothing (not cash)'}</dd>
+      </dl>
+      <ul class="dash-items mt-2">${o.items.map((i) => `<li><strong>${i.qty}×</strong> ${esc(i.name)}</li>`).join('')}</ul>
+      ${active ? '<button type="button" class="btn btn-dark w-100 btn-lg mt-2" data-action="rider-delivered"><i class="bi bi-check2-circle"></i> Mark as delivered</button>' : ''}
+    </section>`;
+  const me = r.lastPosition || o.rider;
+  ui.riderMap = drawMap($('#riderMap'), { store: o.storeLocation, storeName: o.storeName, dest: o.destination, rider: me });
+}
+
+function riderStatusText() {
+  const r = ui.rider;
+  if (!r.lastSent) return 'Finding your location…';
+  return `Location sent ${agoText(r.lastSent)}${r.lastPosition?.accuracy ? ` · accurate to about ${Math.round(r.lastPosition.accuracy)} m` : ''}`;
+}
+
+async function sendRiderPosition(pos) {
+  const r = ui.rider;
+  if (!r) return;
+  r.pending = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+  r.lastPosition = { ...r.pending, at: new Date().toISOString() };
+  setRiderOnMap(ui.riderMap, r.lastPosition, { follow: true });
+  flushRiderPosition();
+}
+
+/** Send the newest position, at most once every 4 seconds. A position that arrives
+    during the wait is sent when the wait ends, so the last one is never lost. */
+async function flushRiderPosition() {
+  const r = ui.rider;
+  if (!r || !r.pending || r.sending || r.watchId === null) return;
+  const wait = 4000 - (Date.now() - (r.lastSentAttempt || 0));
+  if (wait > 0) {
+    if (!r.flushTimer) r.flushTimer = setTimeout(() => { r.flushTimer = null; flushRiderPosition(); }, wait);
+    return;
+  }
+  const p = r.pending;
+  r.pending = null;
+  r.sending = true;
+  r.lastSentAttempt = Date.now();
+  try {
+    await api(`/rider/${encodeURIComponent(r.token)}/location`, { method: 'POST', body: p });
+    r.lastSent = Date.now();
+    r.error = '';
+  } catch (err) {
+    r.error = err.message;
+    if (err.status === 400) { r.sending = false; await renderRider(r.token); return; }
+  } finally {
+    r.sending = false;
+  }
+  const st = $('#riderShareStatus');
+  if (st) st.textContent = riderStatusText();
+  if (r.pending) flushRiderPosition();
+}
+
+function startSharing() {
+  const r = ui.rider;
+  if (!navigator.geolocation) { r.error = "This browser can't share location. Try Chrome or Safari on your phone."; paintRider(); return; }
+  r.error = '';
+  r.lastSentAttempt = 0;
+  r.watchId = navigator.geolocation.watchPosition(sendRiderPosition, (err) => {
+    if (err.code === 1) { // permission denied: sharing can't work
+      r.error = 'Location permission was blocked. Allow location for this site in your browser settings, then try again.';
+      stopSharing();
+      paintRider();
+      return;
+    }
+    // GPS temporarily unavailable or slow: keep watching, just tell the rider
+    r.error = "Waiting for GPS… make sure location is turned on.";
+    const st = $('#riderShareStatus');
+    if (st) st.textContent = r.error;
+  }, { enableHighAccuracy: true, maximumAge: 5000 });
+  // Re-send the last known position every 15 s even when standing still,
+  // so the customer sees "updated a few seconds ago" instead of an old time.
+  r.heartbeat = setInterval(() => {
+    if (r.lastPosition && !r.pending && Date.now() - (r.lastSentAttempt || 0) > 14000) {
+      r.pending = { lat: r.lastPosition.lat, lng: r.lastPosition.lng, accuracy: r.lastPosition.accuracy };
+      flushRiderPosition();
+    }
+  }, 5000);
+  // keep the phone screen on while sharing, where supported
+  navigator.wakeLock?.request('screen').then((lock) => { if (ui.rider) ui.rider.wakeLock = lock; }).catch(() => {});
+  paintRider();
+  toast('Sharing your live location', { icon: 'bi-broadcast', type: 'ok' });
+}
+
+function stopSharing() {
+  const r = ui.rider;
+  if (!r) return;
+  if (r.watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(r.watchId);
+  r.watchId = null;
+  clearTimeout(r.flushTimer);
+  clearInterval(r.heartbeat);
+  r.flushTimer = null;
+  r.heartbeat = null;
+  r.pending = null;
+  r.wakeLock?.release?.().catch?.(() => {});
+  r.wakeLock = null;
+}
+
 /* ============================================================= ROUTER */
-const VIEW_FOR = { home: 'home', restaurants: 'vendors', shops: 'vendors', vendor: 'vendor', browse: 'browse', checkout: 'checkout', orders: 'orders', track: 'track', favourites: 'favourites', account: 'account', settings: 'settings', help: 'help', login: 'login', partner: 'partner', admin: 'admin', notfound: 'notfound' };
-const TAB_FOR = { home: 'home', restaurants: 'home', shops: 'home', vendor: 'home', browse: 'browse', checkout: 'home', orders: 'orders', track: 'orders', favourites: 'favourites', account: 'account', settings: 'account', help: 'account', login: 'account', partner: 'account', admin: 'account' };
+const VIEW_FOR = { home: 'home', restaurants: 'vendors', shops: 'vendors', vendor: 'vendor', browse: 'browse', checkout: 'checkout', orders: 'orders', track: 'track', favourites: 'favourites', account: 'account', settings: 'settings', help: 'help', login: 'login', partner: 'partner', admin: 'admin', rider: 'rider', notfound: 'notfound' };
+const TAB_FOR = { home: 'home', restaurants: 'home', shops: 'home', vendor: 'home', browse: 'browse', checkout: 'home', orders: 'orders', track: 'orders', favourites: 'favourites', account: 'account', settings: 'account', help: 'account', login: 'account', partner: 'account', admin: 'account', rider: 'home' };
 const NEEDS_LOGIN = { orders: 'Log in to see your orders.', track: 'Log in to track your order.', favourites: 'Log in to see your favourites.', account: 'Log in to see your account.', partner: 'Log in or create an account to sell on Mangao.', admin: 'Log in as an admin.' };
 
 function parseHash() {
@@ -2031,7 +2275,7 @@ function parseHash() {
   const query = Object.fromEntries(new URLSearchParams(qs));
   const name = parts[0] || 'home';
   const params = {};
-  if ((name === 'vendor' || name === 'track') && parts[1]) params.id = decodeURIComponent(parts[1]);
+  if ((name === 'vendor' || name === 'track' || name === 'rider') && parts[1]) params.id = decodeURIComponent(parts[1]);
   return { name: VIEW_FOR[name] ? name : 'notfound', params, query };
 }
 
@@ -2044,7 +2288,13 @@ function startPolling(r) {
   clearInterval(ui.pollTimer);
   ui.pollTimer = null;
   const every = (ms, fn) => { ui.pollTimer = setInterval(() => { if (!document.hidden) fn(); }, ms); };
-  if (r.name === 'track') every(10000, () => refreshOrder(r.params.id));
+  if (r.name === 'track') every(5000, () => refreshOrder(r.params.id));
+  else if (r.name === 'rider') every(15000, async () => {
+    if (!ui.rider) return;
+    const before = ui.rider.order?.status;
+    try { ui.rider.order = (await api(`/rider/${encodeURIComponent(ui.rider.token)}`)).order; } catch { return; }
+    if (ui.rider.order.status !== before) paintRider();
+  });
   else if (r.name === 'orders') every(20000, async () => { await loadOrders(); if (ui.route.name === 'orders') renderOrders(); });
   else if (r.name === 'help' && isLoggedIn()) every(8000, loadMessages);
   else if (r.name === 'partner' && session.user?.role === 'partner') every(15000, async () => {
@@ -2091,6 +2341,9 @@ function router() {
     return;
   }
 
+  if (prev === 'rider' && r.name !== 'rider') stopSharing();
+  if (r.name !== 'track') destroyMap('trackMap');
+  if (r.name !== 'rider') destroyMap('riderMap');
   showView(VIEW_FOR[r.name]);
   ({
     home: renderHome,
@@ -2108,6 +2361,7 @@ function router() {
     login: renderLogin,
     partner: () => { if (session.user.role === 'partner') { session.partner = null; } renderPartner(); },
     admin: () => { session.admin = null; renderAdmin(); },
+    rider: () => renderRider(r.params.id),
     notfound: () => { document.title = 'Not found — Mangao'; },
   })[r.name]();
   if (r.name === 'home') document.title = 'Mangao — Order it. Get it.';
@@ -2126,7 +2380,7 @@ function router() {
   refreshCartUI();
   paintMangi();
   startPolling(r);
-  if (prev !== r.name || r.name === 'vendor' || r.name === 'track') {
+  if (prev !== r.name || ['vendor', 'track', 'rider'].includes(r.name)) {
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (document.activeElement && document.activeElement !== document.body && !$('#appHeader').contains(document.activeElement)) $('#main').focus({ preventScroll: true });
   }
@@ -2254,6 +2508,24 @@ function bindEvents() {
       }
       case 'chat-starter': $('#chatInput').value = el.dataset.text; $('#chatInput').focus(); break;
       case 'logout': logout(); break;
+      case 'start-sharing': startSharing(); break;
+      case 'stop-sharing': stopSharing(); paintRider(); toast('Location sharing stopped', { icon: 'bi-pause-fill' }); break;
+      case 'rider-delivered':
+        confirmDialog('Mark as delivered?', 'Only do this after handing the order to the customer.', 'Mark delivered', async () => {
+          const res = await tryApi(`/rider/${encodeURIComponent(ui.rider.token)}/delivered`, { method: 'POST' });
+          if (!res) return;
+          stopSharing();
+          ui.rider.order = res.order;
+          paintRider();
+          toast('Order marked as delivered', { icon: 'bi-check2-circle', type: 'ok' });
+        });
+        break;
+      case 'copy-rider-link': {
+        const link = `${location.origin}${location.pathname}#/rider/${el.dataset.token}`;
+        navigator.clipboard?.writeText(link).then(() => toast('Rider link copied. Send it to your rider.', { icon: 'bi-link-45deg', type: 'ok' }))
+          .catch(() => toast(`Rider link: ${link}`, { icon: 'bi-link-45deg', ms: 9000 }));
+        break;
+      }
       case 'set-status': {
         const refresh = ui.route.name === 'admin'
           ? async () => { await loadAdmin(); renderAdmin(); }

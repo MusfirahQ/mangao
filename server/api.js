@@ -3,6 +3,7 @@ import { randomBytes, randomInt } from 'node:crypto';
 import { q, one } from './db.js';
 import { ensureReady } from './schema.js';
 import { hashPassword, checkPassword, setSession, clearSession, readSession } from './auth.js';
+import { coordsFor, validLatLng } from './geo.js';
 
 /* ------------------------------------------------------------------ helpers */
 class HttpError extends Error {
@@ -41,6 +42,7 @@ const storeView = (s) => ({
   ratings: s.ratings, eta: [s.eta_min, s.eta_max], deliveryFee: s.delivery_fee,
   freeDeliveryOver: s.free_delivery_over, minOrder: s.min_order, area: s.area, address: s.address,
   color: s.color, cover: s.cover, featured: s.featured, isDemo: s.is_demo, isOpen: s.is_open, status: s.status,
+  lat: s.lat, lng: s.lng,
 });
 const productView = (p) => ({
   id: p.id, vendorId: p.store_id, section: p.section, name: p.name, category: p.category, price: p.price,
@@ -53,7 +55,7 @@ const userView = (u, store) => ({
 
 async function loadOrders(whereSql, params, limit = 100) {
   const orders = await q(
-    `SELECT o.*, s.name AS store_name, s.area AS store_area, s.eta_max AS store_eta
+    `SELECT o.*, s.name AS store_name, s.area AS store_area, s.eta_max AS store_eta, s.lat AS store_lat, s.lng AS store_lng
      FROM orders o JOIN stores s ON s.id = o.store_id
      WHERE ${whereSql} ORDER BY o.created_at DESC LIMIT ${limit}`,
     params
@@ -68,10 +70,20 @@ async function loadOrders(whereSql, params, limit = 100) {
     contact: o.contact, payment: o.payment, when: o.when_text, notes: o.notes, riderNote: o.rider_note,
     subtotal: o.subtotal, deliveryFee: o.delivery_fee, discount: o.discount, tip: o.tip, total: o.total,
     promo: o.promo, rating: o.rating, createdAt: o.created_at, updatedAt: o.updated_at,
+    storeLocation: o.store_lat != null ? { lat: o.store_lat, lng: o.store_lng } : null,
+    destination: o.dest_lat != null ? { lat: o.dest_lat, lng: o.dest_lng, approximate: true } : null,
+    // the rider's live position is only shown while the order is on its way
+    rider: o.status === 'on_the_way' && o.rider_at
+      ? { lat: o.rider_lat, lng: o.rider_lng, accuracy: o.rider_accuracy, at: o.rider_at } : null,
+    riderToken: o.rider_token,
     items: items.filter((i) => i.order_id === o.id).map((i) => ({ productId: i.product_id, name: i.name, price: i.price, qty: i.qty })),
     events: events.filter((e) => e.order_id === o.id).map((e) => ({ status: e.status, note: e.note, at: e.created_at })),
   }));
 }
+
+// Customers never see the rider link (it lets someone send the rider's location).
+const forCustomer = (o) => { const { riderToken, ...rest } = o; return rest; };
+const viewFor = (user, o) => (user.role === 'admin' || (user.role === 'partner' && user.store_id === o.storeId) ? o : forCustomer(o));
 
 async function currentUser(req) {
   const session = readSession(req);
@@ -290,12 +302,14 @@ route('POST', '/orders', async ({ user, body }) => {
 
   const contact = validateContact(body.contact || {});
   let address = '';
+  let dest = [null, null];
   if (mode === 'delivery') {
     const line = str(body.address, 200);
     const area = str(body.area, 40);
     if (line.length < 8) bad('Enter your delivery address with house number and street.');
     if (!AREAS.includes(area)) bad('Choose your area.');
     address = `${line}, ${area}, Lahore`;
+    dest = coordsFor(area);
   }
   const payment = PAYMENTS.includes(body.payment) ? body.payment : 'Cash';
   const tip = mode === 'delivery' && TIPS.includes(Number(body.tip)) ? Number(body.tip) : 0;
@@ -336,11 +350,11 @@ route('POST', '/orders', async ({ user, body }) => {
       id = code('MG');
       const row = await one(
         `INSERT INTO orders (id, checkout_id, user_id, store_id, mode, status, address, contact, payment, when_text,
-           notes, rider_note, subtotal, delivery_fee, discount, tip, total, promo)
-         VALUES ($1,$2,$3,$4,$5,'placed',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+           notes, rider_note, subtotal, delivery_fee, discount, tip, total, promo, dest_lat, dest_lng)
+         VALUES ($1,$2,$3,$4,$5,'placed',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
          ON CONFLICT (id) DO NOTHING RETURNING id`,
         [id, checkoutId, user.id, g.store.id, mode, address, JSON.stringify(contact), payment, when, notes, riderNote,
-          g.subtotal, g.fee, discount, orderTip, total, discount ? promo.code : null]
+          g.subtotal, g.fee, discount, orderTip, total, discount ? promo.code : null, dest[0], dest[1]]
       );
       if (row) break;
       id = null;
@@ -370,12 +384,12 @@ route('POST', '/orders', async ({ user, body }) => {
   }
   if (!user.phone && contact.phone) await q('UPDATE users SET phone = $1 WHERE id = $2', [contact.phone, user.id]);
 
-  return { checkoutId, orders: await loadOrders('o.checkout_id = $1', [checkoutId]) };
+  return { checkoutId, orders: (await loadOrders('o.checkout_id = $1', [checkoutId])).map(forCustomer) };
 });
 
 route('GET', '/orders', async ({ user }) => {
   need(user);
-  return { orders: await loadOrders('o.user_id = $1', [user.id]) };
+  return { orders: (await loadOrders('o.user_id = $1', [user.id])).map(forCustomer) };
 });
 
 async function orderFor(user, id) {
@@ -388,7 +402,7 @@ async function orderFor(user, id) {
 
 route('GET', '/orders/:id', async ({ user, params }) => {
   need(user);
-  return { order: await orderFor(user, params.id) };
+  return { order: viewFor(user, await orderFor(user, params.id)) };
 });
 
 route('POST', '/orders/:id/cancel', async ({ user, params }) => {
@@ -402,7 +416,7 @@ route('POST', '/orders/:id/cancel', async ({ user, params }) => {
     const still = await one(`SELECT 1 AS x FROM orders WHERE user_id = $1 AND promo = $2 AND status <> 'cancelled'`, [user.id, order.promo]);
     if (!still) await q('DELETE FROM promo_redemptions WHERE user_id = $1 AND code = $2', [user.id, order.promo]);
   }
-  return { order: await orderFor(user, order.id) };
+  return { order: forCustomer(await orderFor(user, order.id)) };
 });
 
 route('POST', '/orders/:id/rate', async ({ user, params, body }) => {
@@ -416,7 +430,7 @@ route('POST', '/orders/:id/rate', async ({ user, params, body }) => {
     await q(`UPDATE stores SET rating = ROUND(((rating * ratings + $1) / (ratings + 1))::numeric, 1), ratings = ratings + 1 WHERE id = $2`, [stars, order.storeId]);
   }
   await q('UPDATE orders SET rating = $1 WHERE id = $2', [stars, order.id]);
-  return { order: await orderFor(user, order.id) };
+  return { order: forCustomer(await orderFor(user, order.id)) };
 });
 
 route('POST', '/orders/:id/status', async ({ user, params, body }) => {
@@ -431,8 +445,48 @@ route('POST', '/orders/:id/status', async ({ user, params, body }) => {
     (next === 'cancelled' && user.role === 'admin' && !FINAL.includes(order.status));
   if (!ok) bad(`An order that is “${order.status}” can't be moved to “${next}”.`);
   await q('UPDATE orders SET status = $1, updated_at = now() WHERE id = $2', [next, order.id]);
+  if (next === 'on_the_way' && !order.riderToken) {
+    await q('UPDATE orders SET rider_token = $1 WHERE id = $2', [randomBytes(18).toString('base64url'), order.id]);
+  }
   await q('INSERT INTO order_events (order_id, status, note) VALUES ($1,$2,$3)', [order.id, next, str(body.note, 140)]);
   return { order: await orderFor(user, order.id) };
+});
+
+/* ---------- rider (live location) ----------
+   The store gets a secret rider link for each order that is out for delivery.
+   Whoever opens it (the rider) can share their phone's GPS position and mark the order delivered.
+   No login is needed, the long random token in the link is the permission. */
+async function riderOrder(token) {
+  const t = String(token || '');
+  if (t.length < 20) throw new HttpError(404, 'This rider link is not valid.');
+  const [order] = await loadOrders('o.rider_token = $1', [t]);
+  if (!order) throw new HttpError(404, 'This rider link is not valid.');
+  return order;
+}
+const riderView = (o) => ({
+  id: o.id, status: o.status, storeName: o.storeName, storeArea: o.storeArea, address: o.address,
+  contact: { name: o.contact.name, phone: o.contact.phone }, items: o.items, total: o.total, payment: o.payment,
+  notes: o.notes, riderNote: o.riderNote, storeLocation: o.storeLocation, destination: o.destination, rider: o.rider,
+});
+
+route('GET', '/rider/:token', async ({ params }) => ({ order: riderView(await riderOrder(params.token)) }));
+
+route('POST', '/rider/:token/location', async ({ params, body }) => {
+  const order = await riderOrder(params.token);
+  if (order.status !== 'on_the_way') bad('This order is no longer out for delivery, so location sharing has stopped.');
+  const lat = Number(body.lat), lng = Number(body.lng);
+  const accuracy = Math.max(0, Math.min(100000, Number(body.accuracy) || 0));
+  if (!validLatLng(lat, lng)) bad('Invalid location.');
+  await q('UPDATE orders SET rider_lat = $1, rider_lng = $2, rider_accuracy = $3, rider_at = now() WHERE id = $4', [lat, lng, accuracy, order.id]);
+  return { ok: true };
+});
+
+route('POST', '/rider/:token/delivered', async ({ params }) => {
+  const order = await riderOrder(params.token);
+  if (order.status !== 'on_the_way') bad('This order is not out for delivery.');
+  await q(`UPDATE orders SET status = 'delivered', updated_at = now() WHERE id = $1`, [order.id]);
+  await q(`INSERT INTO order_events (order_id, status, note) VALUES ($1, 'delivered', 'Marked delivered by rider')`, [order.id]);
+  return { order: riderView((await loadOrders('o.id = $1', [order.id]))[0]) };
 });
 
 /* ---------- partners (restaurant / shop owners) ---------- */
@@ -454,9 +508,10 @@ route('POST', '/partner/apply', async ({ user, body }) => {
   if (await one('SELECT id FROM stores WHERE id = $1', [id])) id = `${id}-${randomBytes(2).toString('hex')}`;
   const colors = ['#C8102E', '#0B7A3E', '#004E9F', '#6B2D1F', '#7A1F1F', '#1F1F1F', '#D4145A'];
   await q(
-    `INSERT INTO stores (id, name, type, kind, tags, rating, ratings, area, address, phone, color, cover, status, is_demo)
-     VALUES ($1,$2,$3,$4,$5,0,0,$6,$7,$8,$9,$10,'pending',false)`,
-    [id, name, type, kind, JSON.stringify([kind]), area, address, phone, colors[randomInt(colors.length)], type === 'shop' ? 'supermarket' : 'burger']
+    `INSERT INTO stores (id, name, type, kind, tags, rating, ratings, area, address, phone, color, cover, status, is_demo, lat, lng)
+     VALUES ($1,$2,$3,$4,$5,0,0,$6,$7,$8,$9,$10,'pending',false,$11,$12)`,
+    [id, name, type, kind, JSON.stringify([kind]), area, address, phone, colors[randomInt(colors.length)], type === 'shop' ? 'supermarket' : 'burger',
+      ...coordsFor(area)]
   );
   const updated = await one(`UPDATE users SET role = 'partner', store_id = $1 WHERE id = $2 RETURNING *`, [id, user.id]);
   const store = await one('SELECT * FROM stores WHERE id = $1', [id]);

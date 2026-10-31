@@ -16,6 +16,7 @@ Web Technologies course project: frontend (midterm) + backend (final).
 - Promo code `MANGO150` (Rs. 150 off, once per account), checked on the server
 - Checkout: prices, fees and discounts are recalculated on the server, so they can't be changed in the browser
 - Live order tracking (updates automatically): placed → accepted → preparing → on the way / ready → delivered / collected
+- **Live map** (OpenStreetMap + Leaflet): store, delivery area and the rider's real GPS position moving while the order is on the way
 - Cancel before the store accepts, reorder, rate completed orders (updates the store rating)
 - Favourite items and stores, profile, change password, download my data, delete account
 - Help: report a problem on an order, and message support (the admin replies in the same chat)
@@ -24,6 +25,7 @@ Web Technologies course project: frontend (midterm) + backend (final).
 **Store partners**
 - "Sell on Mangao" application → admin approves the store
 - Dashboard: new orders appear automatically, accept / decline, move orders through each step
+- When an order goes out for delivery, a secret **rider link** is created. The rider opens it on their phone, taps *Start sharing*, and the phone's GPS (browser Geolocation API) is sent every few seconds. The rider can mark the order delivered.
 - Open / close the store, set delivery time, fee and minimum order
 - Manage the menu: add items, change prices, mark sold out, delete
 
@@ -58,6 +60,7 @@ server/
   schema.js        Creates tables and seeds stores, menus, promo code and admin account
   auth.js          Password hashing and session cookies
   db.js            Postgres connection (Neon or local PGlite)
+  geo.js           Map positions for Lahore areas
   catalog.json     Starting stores and menus
 scripts/dev-server.js   Local server for development
 vercel.json        Routing, security headers, output folder
@@ -89,6 +92,7 @@ Local accounts: admin `admin@mangao.local` / `admin12345`, KFC partner `kfc@mang
 | GET | `/api/auth/me` | everyone |
 | GET/POST | `/api/orders` · GET `/api/orders/:id` · POST `/api/orders/:id/cancel`, `/rate` | customer |
 | POST | `/api/orders/:id/status` | store partner, admin |
+| GET/POST | `/api/rider/:token`, `/api/rider/:token/location`, `/api/rider/:token/delivered` | rider (secret link) |
 | GET/POST/DELETE | `/api/addresses`, `/api/favourites`, `/api/tickets`, `/api/messages` | customer |
 | GET/PATCH/POST/DELETE | `/api/partner/store`, `/api/partner/products` | store partner |
 | GET/POST | `/api/admin/overview`, `/api/admin/stores/:id`, `/api/admin/tickets/:id`, `/api/admin/messages/:userId` | admin |
