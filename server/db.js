@@ -1,44 +1,29 @@
-// Database connection.
-// On Vercel we use Neon Postgres (DATABASE_URL is added by the Neon integration).
-// When running locally without DATABASE_URL we use PGlite, a real Postgres that runs in-process,
-// so the same SQL works in both places.
+// MongoDB connection with Mongoose. The connection is cached so serverless functions reuse it.
+import mongoose from 'mongoose';
+import { seed } from './seed.js';
 
-let queryFn = null;
+let ready = null;
 
-// Vercel's Neon integration may add a prefix to the variable names (e.g. Mangao_DATABASE_URL).
-function databaseUrl() {
+function mongoUri() {
   const env = process.env;
-  if (env.DATABASE_URL) return env.DATABASE_URL;
-  if (env.POSTGRES_URL) return env.POSTGRES_URL;
-  const key = Object.keys(env).find((k) => k.endsWith('_DATABASE_URL'))
-    || Object.keys(env).find((k) => k.endsWith('_POSTGRES_URL'));
-  return key ? env[key] : '';
+  if (env.MONGODB_URI) return env.MONGODB_URI;
+  // Vercel integrations may add a prefix, e.g. Mangao_MONGODB_URI
+  const key = Object.keys(env).find((k) => k.endsWith('MONGODB_URI'));
+  if (key) return env[key];
+  if (process.env.VERCEL) throw new Error('MONGODB_URI is not set. Connect a MongoDB Atlas database to this Vercel project.');
+  return 'mongodb://127.0.0.1:27017/mangao';
 }
 
-export async function getQuery() {
-  if (queryFn) return queryFn;
-  const url = databaseUrl();
-  if (url) {
-    const { neon } = await import('@neondatabase/serverless');
-    const sql = neon(url);
-    queryFn = (text, params = []) => sql.query(text, params);
-  } else {
-    if (process.env.VERCEL) {
-      throw new Error('DATABASE_URL is not set. Connect a Neon database to this Vercel project.');
-    }
-    const { PGlite } = await import('@electric-sql/pglite');
-    const db = new PGlite(process.env.PGLITE_DIR || undefined);
-    queryFn = async (text, params = []) => (await db.query(text, params)).rows;
+export function connectDB() {
+  if (!ready) {
+    ready = (async () => {
+      mongoose.set('strictQuery', true);
+      await mongoose.connect(mongoUri(), { serverSelectionTimeoutMS: 10000, maxPoolSize: 5 });
+      await seed();
+    })().catch((err) => {
+      ready = null; // try again on the next request
+      throw err;
+    });
   }
-  return queryFn;
-}
-
-export async function q(text, params) {
-  const run = await getQuery();
-  return run(text, params);
-}
-
-export async function one(text, params) {
-  const rows = await q(text, params);
-  return rows[0] || null;
+  return ready;
 }

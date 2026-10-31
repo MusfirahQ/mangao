@@ -1,2 +1,4 @@
-// Vercel serverless function: every /api/* request is sent here (see vercel.json).
-export { default } from '../server/api.js';
+// Vercel serverless function: every /api/* request is handled by the Express app.
+import app from '../server/app.js';
+
+export default app;
