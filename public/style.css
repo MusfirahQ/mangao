@@ -724,3 +724,55 @@ html[data-theme="dark"] .btn-close { filter: invert(1) grayscale(1) brightness(2
 @media (min-width: 576px) { body:has(.cart-panel.show) .toast-container, body:has(.cart-panel.showing) .toast-container { right: 464px; } }
 @media (max-width: 575.98px) { body:has(.cart-panel.show) .toast-container { bottom: auto; top: 12px; } }
 html[data-theme="dark"] .m-toast { background: #2E3034; border: 1px solid #44474C; }
+
+/* ---------- v2: accounts, live orders, partner + admin dashboards ---------- */
+.contents { display: contents; }
+.account-logout { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); font-weight: 600; background: var(--surface); color: var(--text); text-align: left; }
+.account-logout .bi:first-child { font-size: 1.2rem; color: var(--mango-deep); }
+.account-logout .bi:last-child { margin-left: auto; color: var(--text-2); }
+.account-logout:hover { border-color: var(--charcoal); }
+.demo-tag { font-size: .76rem; color: var(--text-2); margin: 8px 0 0; display: flex; gap: 6px; align-items: flex-start; }
+.vendor-card.is-closed .img-tile { filter: grayscale(.7); opacity: .75; }
+.closed-pill { background: #FDECEA !important; border-color: #F5C6C2 !important; color: #7A1712; }
+.status-tag.stopped { background: #FDECEA; color: #7A1712; }
+.sim-badge.live { border-style: solid; border-color: #CFE6D7; background: #EAF5EE; color: #1F5136; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #2E9D5B; animation: pulse 1.6s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.msg-time { display: block; font-size: .7rem; opacity: .6; margin-top: 4px; }
+
+.auth-wrap { display: flex; justify-content: center; }
+.auth-card { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-6) var(--s-5); box-shadow: var(--shadow-2); }
+.auth-card.wide { max-width: 760px; margin: 0 auto; }
+.auth-mangi { width: 76px; margin: 0 auto var(--s-3); }
+.auth-mangi svg { width: 100%; height: auto; display: block; }
+.auth-card .seg-tabs { display: flex; }
+
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--s-3); }
+.dash-order { margin-bottom: 0; }
+.dash-items { list-style: none; padding: 0; margin: 10px 0; font-size: .92rem; }
+.dash-items li { padding: 2px 0; }
+.dash-table th { font-size: .82rem; color: var(--text-2); font-weight: 600; white-space: nowrap; }
+.dash-table td, .dash-table th { padding: 10px 14px; background: transparent; }
+.dash-table .vendor-logo { position: static; display: inline-flex; width: 32px; height: 32px; border-radius: 9px; font-size: .7rem; border: 0; box-shadow: none; vertical-align: middle; }
+.price-input { max-width: 110px; }
+.admin-stats { grid-template-columns: repeat(6, 1fr); }
+.admin-chat { display: grid; grid-template-columns: 300px 1fr; gap: var(--s-4); align-items: start; }
+.convo-list { max-height: 560px; overflow-y: auto; }
+.convo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 12px 16px; color: var(--text); }
+.convo small { color: var(--text-2); font-size: .78rem; }
+.convo.active, .convo:hover { background: var(--surface-2); }
+.admin-thread { position: static; height: 560px; }
+.seg-tabs.flex-wrap { border-radius: var(--r-md); }
+
+@media (max-width: 991.98px) {
+  .admin-stats { grid-template-columns: repeat(3, 1fr); }
+  .admin-chat { grid-template-columns: 1fr; }
+  .admin-thread { height: 460px; }
+}
+@media (max-width: 575.98px) {
+  .admin-stats { grid-template-columns: repeat(2, 1fr); }
+  .dash-grid { grid-template-columns: 1fr; }
+  .auth-card { padding: var(--s-5) var(--s-4); }
+}
+html[data-theme="dark"] .closed-pill, html[data-theme="dark"] .status-tag.stopped { background: #3A1E1C; color: #FFB4AB; border-color: #5A2A26 !important; }
+html[data-theme="dark"] .sim-badge.live { background: #1F3326; color: #A9DDBC; border-color: #2D4A37; }

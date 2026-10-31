@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Mangao — order food, groceries and everyday essentials in one basket. Student frontend prototype.">
+  <meta name="description" content="Mangao — order food, groceries and everyday essentials in Lahore, in one basket.">
   <meta name="theme-color" content="#F5A900">
   <title>Mangao — Order it. Get it.</title>
   <link rel="icon" href="assets/mangi.svg" type="image/svg+xml">
@@ -58,14 +58,7 @@
           <button class="icon-btn avatar-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
             <span class="avatar" id="headerAvatar">G</span>
           </button>
-          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-            <li><a class="dropdown-item" href="#/account"><i class="bi bi-person me-2" aria-hidden="true"></i>Profile</a></li>
-            <li><a class="dropdown-item" href="#/orders"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Orders</a></li>
-            <li><a class="dropdown-item" href="#/favourites"><i class="bi bi-heart me-2" aria-hidden="true"></i>Favourites</a></li>
-            <li><a class="dropdown-item" href="#/settings"><i class="bi bi-gear me-2" aria-hidden="true"></i>Settings</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#/help"><i class="bi bi-life-preserver me-2" aria-hidden="true"></i>Help &amp; support</a></li>
-          </ul>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm" id="accountMenu"></ul>
         </div>
         <button type="button" class="cart-btn" data-bs-toggle="offcanvas" data-bs-target="#cartPanel" aria-controls="cartPanel">
           <i class="bi bi-basket2-fill" aria-hidden="true"></i>
@@ -127,7 +120,7 @@
           <div class="promo-mangi" data-mangi="wave" aria-hidden="true"></div>
           <div class="promo-copy">
             <h2 id="promoTitle">Rs. 150 off your first basket</h2>
-            <p>Use code <strong>MANGO150</strong> at checkout. It's a demo code for this prototype — no real money involved.</p>
+            <p>Use code <strong>MANGO150</strong> at checkout. One use per account.</p>
           </div>
           <button type="button" class="btn btn-dark promo-copy-btn" id="copyPromoBtn"><i class="bi bi-clipboard me-1" aria-hidden="true"></i>Copy code</button>
         </section>
@@ -265,6 +258,10 @@
                   <div class="form-text" id="coAddressHelp">Pick a saved address or type a new one.</div>
                   <div class="invalid-feedback" id="coAddressErr"></div>
                   <div class="saved-addr-row" id="savedAddrPicker" aria-label="Saved addresses"></div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="coSaveAddr" checked>
+                    <label class="form-check-label small" for="coSaveAddr">Save this address to my account</label>
+                  </div>
                 </div>
                 <div class="row g-3">
                   <div class="col-sm-6">
@@ -322,9 +319,9 @@
                     <label class="pay-opt"><input type="radio" name="coPay" value="Wallet (demo)"><span><i class="bi bi-phone" aria-hidden="true"></i>Wallet</span></label>
                   </div>
                 </div>
-                <div class="col-12"><p class="demo-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Payments are not processed in this prototype and no card details are collected.</p></div>
+                <div class="col-12"><p class="demo-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Pay in cash when your order arrives or when you collect it. Card and wallet are test options for now: no card details are asked for and nothing is charged.</p></div>
                 <div class="col-12" id="tipWrap">
-                  <span class="form-label d-block" id="tipLabel">Tip your rider <span class="opt">optional, 100% goes to them in a real launch</span></span>
+                  <span class="form-label d-block" id="tipLabel">Tip your rider <span class="opt">optional, 100% goes to the rider</span></span>
                   <div class="tip-row" role="radiogroup" aria-labelledby="tipLabel" id="tipRow"></div>
                 </div>
                 <div class="col-12">
@@ -347,8 +344,8 @@
               </div>
               <div class="promo-msg" id="coPromoMsg" aria-live="polite"></div>
             </div>
-            <button type="submit" form="checkoutForm" class="btn btn-mango btn-lg w-100 mt-3" id="placeOrderBtn">Place demo order</button>
-            <p class="tiny-note">This creates a local demo order only. No restaurant or shop receives it.</p>
+            <button type="submit" form="checkoutForm" class="btn btn-mango btn-lg w-100 mt-3" id="placeOrderBtn">Place order</button>
+            <p class="tiny-note">Your order is sent straight to the store. You can follow it live on the tracking page.</p>
           </aside>
         </div>
       </div>
@@ -405,6 +402,8 @@
           <a href="#/favourites"><i class="bi bi-heart" aria-hidden="true"></i>Favourites<i class="bi bi-chevron-right" aria-hidden="true"></i></a>
           <a href="#/settings"><i class="bi bi-gear" aria-hidden="true"></i>Settings<i class="bi bi-chevron-right" aria-hidden="true"></i></a>
           <a href="#/help"><i class="bi bi-life-preserver" aria-hidden="true"></i>Help &amp; support<i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+          <span id="roleLinks" class="contents"></span>
+          <button type="button" class="account-logout" data-action="logout"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Log out<i class="bi bi-chevron-right" aria-hidden="true"></i></button>
         </div>
 
         <form class="panel" id="profileForm" novalidate aria-labelledby="profileFormTitle">
@@ -422,7 +421,8 @@
             </div>
             <div class="col-sm-6">
               <label for="pfEmail" class="form-label">Email</label>
-              <input id="pfEmail" class="form-control" type="email" placeholder="you@example.com" aria-describedby="pfEmailErr">
+              <input id="pfEmail" class="form-control" type="email" readonly aria-describedby="pfEmailHelp">
+              <div class="form-text" id="pfEmailHelp">Your login email can't be changed.</div>
               <div class="invalid-feedback" id="pfEmailErr"></div>
             </div>
           </div>
@@ -499,24 +499,55 @@
         <section class="panel" aria-labelledby="setNotifs">
           <h2 class="panel-title" id="setNotifs">Notifications</h2>
           <div class="setting-row">
-            <div><label for="setNotifOrder" class="setting-name">Order progress alerts</label><p class="setting-desc">Shows an in-app message when a demo order moves to its next step.</p></div>
+            <div><label for="setNotifOrder" class="setting-name">Order progress alerts</label><p class="setting-desc">Show a message in the app when one of your orders moves to its next step.</p></div>
             <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="setNotifOrder"></div>
           </div>
           <div class="setting-row">
-            <div><label for="setNotifPromo" class="setting-name">Offers and deals</label><p class="setting-desc">Saved as a preference only — the prototype sends no messages.</p></div>
+            <div><label for="setNotifPromo" class="setting-name">Offers and deals</label><p class="setting-desc">Show offer banners in the app.</p></div>
             <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="setNotifPromo"></div>
           </div>
         </section>
 
+        <section class="panel" aria-labelledby="setSecurity" id="securityPanel">
+          <h2 class="panel-title" id="setSecurity">Password</h2>
+          <form id="passwordForm" novalidate>
+            <div class="row g-2">
+              <div class="col-sm-6">
+                <label for="pwCurrent" class="form-label">Current password</label>
+                <input id="pwCurrent" type="password" class="form-control" autocomplete="current-password" aria-describedby="pwCurrentErr">
+                <div class="invalid-feedback" id="pwCurrentErr"></div>
+              </div>
+              <div class="col-sm-6">
+                <label for="pwNext" class="form-label">New password</label>
+                <input id="pwNext" type="password" class="form-control" autocomplete="new-password" aria-describedby="pwNextErr">
+                <div class="invalid-feedback" id="pwNextErr"></div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-dark mt-3">Change password</button>
+          </form>
+        </section>
+
         <section class="panel" aria-labelledby="setData">
           <h2 class="panel-title" id="setData">Your data</h2>
-          <p class="setting-desc">Mangao keeps your basket, favourites, profile and demo orders in this browser only (localStorage). Nothing is sent to a server.</p>
+          <p class="setting-desc">Your account, addresses, favourites and orders are stored securely on Mangao's servers. Your basket and display settings are kept on this device.</p>
           <div class="d-flex flex-wrap gap-2 mt-2">
             <button type="button" class="btn btn-outline-dark" id="exportDataBtn"><i class="bi bi-download me-1" aria-hidden="true"></i>Download my data</button>
-            <button type="button" class="btn btn-outline-danger" id="resetDataBtn"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Reset all demo data</button>
+            <button type="button" class="btn btn-outline-dark" id="resetDataBtn"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Clear this device</button>
           </div>
+          <form id="deleteForm" class="mt-4" novalidate>
+            <h3 class="h6 text-danger">Delete my account</h3>
+            <p class="setting-desc">This permanently deletes your account, addresses, favourites, orders and messages.</p>
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+              <div>
+                <label for="delPassword" class="visually-hidden">Password</label>
+                <input id="delPassword" type="password" class="form-control" placeholder="Your password" autocomplete="current-password" aria-describedby="delPasswordErr">
+                <div class="invalid-feedback" id="delPasswordErr"></div>
+              </div>
+              <button type="submit" class="btn btn-outline-danger">Delete account</button>
+            </div>
+          </form>
         </section>
-        <p class="tiny-note text-center">Mangao prototype v1.0 · Web Technologies midterm build</p>
+        <p class="tiny-note text-center">Mangao v2.0</p>
       </div>
     </section>
 
@@ -527,7 +558,7 @@
           <div class="help-mangi" data-mangi="help" aria-hidden="true"></div>
           <div>
             <h1 id="helpTitle">How can we help?</h1>
-            <p class="page-sub">Support in this prototype is simulated: reports stay in your browser and the chat replies are pre-written.</p>
+            <p class="page-sub">Report a problem with an order, or message the Mangao team. We reply in this chat.</p>
           </div>
         </div>
 
@@ -566,7 +597,7 @@
           <section class="panel chat-panel" aria-labelledby="chatTitle">
             <div class="chat-head">
               <span class="chat-avatar" data-mangi="mark" aria-hidden="true"></span>
-              <div><h2 class="panel-title mb-0" id="chatTitle">Chat with Mangi</h2><small class="text-body-secondary">Demo assistant · pre-written replies</small></div>
+              <div><h2 class="panel-title mb-0" id="chatTitle">Message support</h2><small class="text-body-secondary">The Mangao team replies here</small></div>
             </div>
             <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="Chat messages"></div>
             <div class="chat-quick" id="chatQuick" aria-label="Suggested questions"></div>
@@ -577,6 +608,77 @@
             </form>
           </section>
         </div>
+      </div>
+    </section>
+
+    <!-- ============================ LOG IN / SIGN UP ============================ -->
+    <section class="view" data-view="login" aria-labelledby="authTitle" hidden>
+      <div class="container-xl page-pad auth-wrap">
+        <div class="auth-card">
+          <div class="auth-mangi" data-mangi="wave" aria-hidden="true"></div>
+          <h1 id="authTitle" class="h3 text-center">Welcome to Mangao</h1>
+          <p class="page-sub text-center mb-3" id="authReason">Log in or create an account to order.</p>
+          <div class="seg-tabs w-100" role="tablist" aria-label="Log in or sign up">
+            <button type="button" role="tab" class="seg-tab flex-fill justify-content-center" id="tabLogin" aria-controls="loginForm" aria-selected="true" data-atab="login">Log in</button>
+            <button type="button" role="tab" class="seg-tab flex-fill justify-content-center" id="tabRegister" aria-controls="registerForm" aria-selected="false" data-atab="register">Create account</button>
+          </div>
+
+          <form id="loginForm" role="tabpanel" aria-labelledby="tabLogin" novalidate>
+            <div class="form-error-summary" id="loginError" role="alert" hidden></div>
+            <div class="mb-3">
+              <label for="liEmail" class="form-label">Email</label>
+              <input id="liEmail" type="email" class="form-control" autocomplete="email" aria-describedby="liEmailErr">
+              <div class="invalid-feedback" id="liEmailErr"></div>
+            </div>
+            <div class="mb-3">
+              <label for="liPassword" class="form-label">Password</label>
+              <input id="liPassword" type="password" class="form-control" autocomplete="current-password" aria-describedby="liPasswordErr">
+              <div class="invalid-feedback" id="liPasswordErr"></div>
+            </div>
+            <button type="submit" class="btn btn-mango btn-lg w-100">Log in</button>
+          </form>
+
+          <form id="registerForm" role="tabpanel" aria-labelledby="tabRegister" novalidate hidden>
+            <div class="form-error-summary" id="registerError" role="alert" hidden></div>
+            <div class="mb-3">
+              <label for="rgName" class="form-label">Full name</label>
+              <input id="rgName" class="form-control" autocomplete="name" maxlength="60" aria-describedby="rgNameErr">
+              <div class="invalid-feedback" id="rgNameErr"></div>
+            </div>
+            <div class="mb-3">
+              <label for="rgEmail" class="form-label">Email</label>
+              <input id="rgEmail" type="email" class="form-control" autocomplete="email" aria-describedby="rgEmailErr">
+              <div class="invalid-feedback" id="rgEmailErr"></div>
+            </div>
+            <div class="mb-3">
+              <label for="rgPhone" class="form-label">Mobile number <span class="opt">optional</span></label>
+              <input id="rgPhone" type="tel" inputmode="tel" class="form-control" autocomplete="tel" placeholder="03XX XXXXXXX" aria-describedby="rgPhoneErr">
+              <div class="invalid-feedback" id="rgPhoneErr"></div>
+            </div>
+            <div class="mb-3">
+              <label for="rgPassword" class="form-label">Password</label>
+              <input id="rgPassword" type="password" class="form-control" autocomplete="new-password" aria-describedby="rgPasswordErr rgPasswordHelp">
+              <div class="form-text" id="rgPasswordHelp">At least 8 characters.</div>
+              <div class="invalid-feedback" id="rgPasswordErr"></div>
+            </div>
+            <button type="submit" class="btn btn-mango btn-lg w-100">Create account</button>
+          </form>
+          <p class="tiny-note text-center mt-3">Own a restaurant or shop? Create an account, then go to <a href="#/partner">Partner with us</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ PARTNER (STORE OWNER) ============================ -->
+    <section class="view" data-view="partner" aria-labelledby="partnerTitle" hidden>
+      <div class="container-xl page-pad">
+        <div id="partnerBody"></div>
+      </div>
+    </section>
+
+    <!-- ============================ ADMIN ============================ -->
+    <section class="view" data-view="admin" aria-labelledby="adminTitle" hidden>
+      <div class="container-xl page-pad">
+        <div id="adminBody"></div>
       </div>
     </section>
 
@@ -618,14 +720,16 @@
           <li><a href="#/account">Profile</a></li>
           <li><a href="#/settings">Settings</a></li>
           <li><a href="#/help">Help &amp; support</a></li>
+          <li><a href="#/partner">Partner with us</a></li>
         </ul>
       </nav>
       <div class="footer-disclaimer">
-        <h2 class="footer-h">About this prototype</h2>
-        <p>Mangao is a student frontend project. Restaurant and shop names, menus and prices are sample data with no affiliation or partnership. No real orders, payments, deliveries or support agents are involved.</p>
+        <h2 class="footer-h">About Mangao</h2>
+        <p>Order food, groceries and essentials from places across Lahore. Stores marked “Demo listing” use well-known brand names as sample menus and are not affiliated with or endorsed by those brands.</p>
+        <p class="mb-0"><a href="#/partner">Sell on Mangao: partner with us</a></p>
       </div>
     </div>
-    <div class="container-xl footer-base">© 2026 Mangao · Built with HTML, CSS, Bootstrap 5 and vanilla JavaScript</div>
+    <div class="container-xl footer-base">© 2026 Mangao · HTML, CSS, Bootstrap 5, JavaScript · Node.js API · PostgreSQL</div>
   </footer>
 
   <!-- ============================ MOBILE BOTTOM NAV ============================ -->

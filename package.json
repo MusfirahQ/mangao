@@ -1,0 +1,21 @@
+{
+  "name": "mangao",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Mangao - food, groceries and essentials ordering app (Web Technologies project)",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev-server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.14"
+  }
+}

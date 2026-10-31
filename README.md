@@ -1,64 +1,94 @@
-# Mangao — *Order it. Get it.*
+# Mangao — Order it. Get it.
 
-Frontend prototype for a multi-category ordering app (food, groceries and everyday essentials) built for the **Web Technologies** course midterm. The backend will be added for the final; for now every order, payment, tracking update and support reply is **simulated locally**.
+Mangao is a full-stack ordering app for food, groceries and everyday essentials in Lahore.
+Customers order from restaurants and shops in one basket, stores manage their orders from a dashboard,
+and an admin runs the whole platform.
 
-> Restaurant and shop names (Pizza Hut, NY212, KFC, Carrefour, Al-Fatah, etc.), menus and prices are **sample data only**. There is no affiliation, partnership, live menu or real availability.
-
-## Run it
-
-1. Unzip the folder. Keep all files together.
-2. Open the folder in **VS Code** and start **Live Server** on `index.html`, **or** just double-click `index.html` to open it in Chrome/Edge/Firefox.
-3. No build step, no API keys, no `npm install`.
-
-Bootstrap, Bootstrap Icons and the fonts are bundled in `vendor/`, so the app works **offline** (e.g. in a lab with no internet). Product photos load from Unsplash when online; offline, or with *Settings → Show product photos* turned off, each item shows an illustrated tile instead.
-
-## Demo details
-
-| Thing | Value |
-|---|---|
-| Promo code | `MANGO150` — Rs. 150 off the subtotal (never below Rs. 0). Once per basket, and once per user across demo orders. Reset demo data in Settings to test it again. |
-| Phone format | Pakistani mobile, e.g. `0300 1234567` or `+923001234567` |
-| Delivery minimums | Each place has a minimum for delivery; Pickup has none |
-| Tracking | Advances automatically (≈10s → 20s → 25s), or press **Skip to next step (demo)** |
-| Sample history | Two orders marked “Sample” are pre-loaded so the history screen isn't empty |
+Web Technologies course project: frontend (midterm) + backend (final).
 
 ## Features
 
-- **Home** — hero search, category tiles (Food / Groceries / Everyday Essentials), Order again, promo banner, restaurant and shop rows, popular items with category chips
-- **Restaurants** and **Shops** — 11 restaurants and 7 shops with type chips, filters (delivery under Rs. 100, rated 4.5+, under 30 min) and sorting
-- **Store pages** — cover, rating, ETA, fee, minimum order, menu sections with jump chips, in-menu search, side basket summary
-- **Search / Browse** — live, case-insensitive search across name, category, section, description and store, combined with category filter and sorting; friendly no-results state with *Clear search*
-- **Product detail** modal with quantity selector
-- **Basket** — one basket across several places, grouped by place, quantity steppers, remove + undo, per-place delivery fee, minimum-order warnings, promo code, itemised totals (subtotal, delivery, discount, service fee Rs. 0, total)
-- **Delivery / Pickup** toggle that updates fees, minimums, ETAs and checkout fields everywhere
-- **Checkout** — validation with inline errors and an error summary, saved-address chips, area select, schedule time, payment choice (not processed), rider tip, order notes with character count
-- **Order tracking** — 4-step simulated stepper, cancel while “Order received”, help shortcut, full order breakdown
-- **Orders** — Active and History tabs, progress bars, reorder, 1–5 star rating, clear history
-- **Favourites** — saved items and saved places
-- **Account** — profile form with validation, saved addresses (add, delete, set default), stats
-- **Settings** — light/dark/system theme, photos on/off, reduce motion, default order mode and tip, notification preferences, download my data (JSON), reset demo data
-- **Help** — issue report form (5 issue types, optional related order) with demo case reference, FAQ, simulated chat with Mangi
-- **Mobile** — bottom tab bar, floating “View basket” bar, full-width basket panel; no horizontal scroll at 360px
-- **Accessibility** — semantic landmarks, labelled inputs, visible focus ring, skip link, `aria-live` updates for basket and forms, keyboard-operable toggles and tabs, focus kept in place when buttons change, reduced-motion support
-- **Persistence** — basket, favourites, profile, addresses, orders, reports and settings are stored in `localStorage` (corrupted data is ignored safely)
+**Customers**
+- Sign up / log in (passwords hashed with bcrypt, session in an HttpOnly cookie)
+- Browse restaurants and shops, filter, sort, search every item
+- One basket across several stores; per-store delivery fee, free-delivery threshold and minimum order
+- Delivery or pickup, saved addresses, scheduled time, rider tip, order notes
+- Promo code `MANGO150` (Rs. 150 off, once per account), checked on the server
+- Checkout: prices, fees and discounts are recalculated on the server, so they can't be changed in the browser
+- Live order tracking (updates automatically): placed → accepted → preparing → on the way / ready → delivered / collected
+- Cancel before the store accepts, reorder, rate completed orders (updates the store rating)
+- Favourite items and stores, profile, change password, download my data, delete account
+- Help: report a problem on an order, and message support (the admin replies in the same chat)
+- Responsive (mobile bottom bar), dark mode, accessible forms and keyboard support
+
+**Store partners**
+- "Sell on Mangao" application → admin approves the store
+- Dashboard: new orders appear automatically, accept / decline, move orders through each step
+- Open / close the store, set delivery time, fee and minimum order
+- Manage the menu: add items, change prices, mark sold out, delete
+
+**Admin**
+- Platform stats, every active order (can move or cancel any order)
+- Approve / suspend stores, assign a store owner by email
+- Reply to and resolve problem reports, reply to customer messages, see users
+
+Payments: cash on delivery / at pickup. Card and wallet are test options only (nothing is charged).
+Stores marked **Demo listing** use well-known brand names as sample menus and are not affiliated with those brands.
+
+## Tech stack
+
+| Part | Technology |
+|---|---|
+| Frontend | HTML5, CSS3, Bootstrap 5, vanilla JavaScript (single-page app with hash routing) |
+| Backend | Node.js serverless function on Vercel (`api/index.js` → `server/api.js`), REST JSON API |
+| Database | PostgreSQL (Neon on Vercel; PGlite when running locally) |
+| Auth | bcryptjs password hashing, JSON Web Token in an HttpOnly, SameSite cookie |
 
 ## Folder structure
 
 ```
-mangao/
-├── index.html        App shell: header, all views, basket panel, modals, footer
-├── style.css         Brand tokens, layout, components, responsive rules, dark theme
-├── data.js           Sample stores, products, categories, promo codes, support types
-├── app.js            State, rendering, search/filter, cart maths, promo, validation,
-│                     demo orders + tracking, favourites, account, settings, help/chat, router
-├── assets/mangi.svg  Mascot / favicon
-└── vendor/           Bootstrap 5.3, Bootstrap Icons, Inter + Plus Jakarta Sans fonts
+public/            Frontend (served as static files)
+  index.html       All screens (sections shown/hidden by the router)
+  style.css        Design system, layout, responsive rules, dark mode
+  data.js          Images, categories, order statuses, areas
+  app.js           State, API calls, rendering, cart, checkout, tracking, dashboards, router
+api/index.js       Vercel serverless entry: every /api/* request
+server/
+  api.js           REST routes (auth, catalog, orders, favourites, addresses, promo, support, partner, admin)
+  schema.js        Creates tables and seeds stores, menus, promo code and admin account
+  auth.js          Password hashing and session cookies
+  db.js            Postgres connection (Neon or local PGlite)
+  catalog.json     Starting stores and menus
+scripts/dev-server.js   Local server for development
+vercel.json        Routing, security headers, output folder
 ```
 
-`data.js` uses the same shapes an API would return (`product = { id, name, category, price, image, description, featured, available, vendorId, section }`), so it can be swapped for `fetch()` calls when the backend is added.
+## Run locally
 
-## Known limitations
+```bash
+npm install
+npm run dev        # http://localhost:3000
+```
+No database setup is needed locally: PGlite stores data in `.pglite/`.
+Local accounts: admin `admin@mangao.local` / `admin12345`, KFC partner `kfc@mangao.local` / `partner12345`.
 
-- No real accounts, backend, database, payments, vendors, riders, GPS or support agents.
-- Data lives in one browser only (localStorage).
-- Product photos need an internet connection; illustrations are used otherwise.
+## Deploy (Vercel)
+
+1. Import the repo into Vercel (Framework preset: Other).
+2. Storage → add a **Neon** Postgres database to the project (sets `DATABASE_URL`).
+3. Environment variables: `JWT_SECRET` (long random string), `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
+   optionally `DEMO_PARTNER_EMAIL`, `DEMO_PARTNER_PASSWORD`, `DEMO_PARTNER_STORE` (default `kfc`).
+4. Deploy. Tables and starting data are created automatically on the first request.
+
+## Main API routes
+
+| Method | Route | Who |
+|---|---|---|
+| GET | `/api/catalog` | everyone |
+| POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | everyone |
+| GET | `/api/auth/me` | everyone |
+| GET/POST | `/api/orders` · GET `/api/orders/:id` · POST `/api/orders/:id/cancel`, `/rate` | customer |
+| POST | `/api/orders/:id/status` | store partner, admin |
+| GET/POST/DELETE | `/api/addresses`, `/api/favourites`, `/api/tickets`, `/api/messages` | customer |
+| GET/PATCH/POST/DELETE | `/api/partner/store`, `/api/partner/products` | store partner |
+| GET/POST | `/api/admin/overview`, `/api/admin/stores/:id`, `/api/admin/tickets/:id`, `/api/admin/messages/:userId` | admin |
