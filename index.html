@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mangao — order food, groceries and everyday essentials in one basket. Student frontend prototype.">
+  <meta name="theme-color" content="#F5A900">
+  <title>Mangao — Order it. Get it.</title>
+  <link rel="icon" href="assets/mangi.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ============================ HEADER ============================ -->
+  <header class="app-header" id="appHeader">
+    <div class="container-xl header-row">
+      <a href="#/" class="brand" aria-label="Mangao home">
+        <span class="brand-mark" data-mangi="mark" aria-hidden="true"></span>
+        <span class="brand-text">
+          <span class="brand-name">Mangao</span>
+          <span class="brand-tagline">Order it. Get it.</span>
+        </span>
+      </a>
+
+      <div class="mode-toggle" role="radiogroup" aria-label="Order mode">
+        <button type="button" class="mode-btn" role="radio" data-mode="delivery" aria-checked="true"><i class="bi bi-bicycle" aria-hidden="true"></i><span>Delivery</span></button>
+        <button type="button" class="mode-btn" role="radio" data-mode="pickup" aria-checked="false"><i class="bi bi-bag" aria-hidden="true"></i><span>Pickup</span></button>
+      </div>
+
+      <button type="button" class="address-chip" id="addressChip" data-bs-toggle="modal" data-bs-target="#addressModal">
+        <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+        <span class="address-chip-text">
+          <span class="address-chip-label" id="addressChipLabel">Deliver to</span>
+          <span class="address-chip-value" id="addressChipValue">Choose address</span>
+        </span>
+        <i class="bi bi-chevron-down small" aria-hidden="true"></i>
+      </button>
+
+      <form class="header-search" role="search" id="headerSearchForm">
+        <label for="headerSearch" class="visually-hidden">Search products, restaurants and shops</label>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" id="headerSearch" placeholder="Search pizza, milk, toothpaste…" autocomplete="off">
+        <button type="button" class="search-clear" id="headerSearchClear" aria-label="Clear search" hidden><i class="bi bi-x-circle-fill" aria-hidden="true"></i></button>
+      </form>
+
+      <nav class="header-nav" aria-label="Main">
+        <a href="#/restaurants" class="nav-link-item" data-nav="restaurants">Restaurants</a>
+        <a href="#/shops" class="nav-link-item" data-nav="shops">Shops</a>
+        <a href="#/orders" class="nav-link-item" data-nav="orders">Orders<span class="dot-badge" id="activeOrdersDot" hidden></span></a>
+      </nav>
+
+      <div class="header-actions">
+        <a href="#/favourites" class="icon-btn d-none d-md-inline-flex" aria-label="Favourites" data-nav="favourites"><i class="bi bi-heart" aria-hidden="true"></i></a>
+        <div class="dropdown d-none d-lg-block">
+          <button class="icon-btn avatar-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
+            <span class="avatar" id="headerAvatar">G</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li><a class="dropdown-item" href="#/account"><i class="bi bi-person me-2" aria-hidden="true"></i>Profile</a></li>
+            <li><a class="dropdown-item" href="#/orders"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Orders</a></li>
+            <li><a class="dropdown-item" href="#/favourites"><i class="bi bi-heart me-2" aria-hidden="true"></i>Favourites</a></li>
+            <li><a class="dropdown-item" href="#/settings"><i class="bi bi-gear me-2" aria-hidden="true"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#/help"><i class="bi bi-life-preserver me-2" aria-hidden="true"></i>Help &amp; support</a></li>
+          </ul>
+        </div>
+        <button type="button" class="cart-btn" data-bs-toggle="offcanvas" data-bs-target="#cartPanel" aria-controls="cartPanel">
+          <i class="bi bi-basket2-fill" aria-hidden="true"></i>
+          <span class="cart-btn-label">Basket</span>
+          <span class="cart-count" id="cartCount" aria-live="polite">0</span>
+          <span class="visually-hidden" id="cartCountLabel">items in basket</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+
+    <!-- ============================ HOME ============================ -->
+    <section class="view" data-view="home" aria-labelledby="homeTitle">
+      <div class="hero">
+        <div class="container-xl hero-grid">
+          <div class="hero-copy">
+            <p class="hero-kicker"><span class="mode-pill" id="heroModePill">Delivering in Lahore</span></p>
+            <h1 id="homeTitle" class="hero-title">Order it.<br>Get it.</h1>
+            <p class="hero-sub">Meals, groceries and everyday essentials from places across Lahore — in one basket, with every rupee itemised.</p>
+            <form class="hero-search" id="heroSearchForm" role="search">
+              <label for="heroSearch" class="visually-hidden">What do you need today?</label>
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input type="search" id="heroSearch" placeholder="What do you need today?" autocomplete="off">
+              <button type="submit" class="btn btn-dark">Find it</button>
+            </form>
+            <div class="hero-quick" aria-label="Popular searches">
+              <span class="text-dark-50">Try</span>
+              <button type="button" class="quick-chip" data-quick="pizza">pizza</button>
+              <button type="button" class="quick-chip" data-quick="biryani">biryani</button>
+              <button type="button" class="quick-chip" data-quick="milk">milk</button>
+              <button type="button" class="quick-chip" data-quick="toothpaste">toothpaste</button>
+            </div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="hero-plate">
+              <div class="hero-mangi" data-mangi="hero"></div>
+              <div class="float-card fc-1"><span>🍕</span>Pizza Hut<small>30–40 min</small></div>
+              <div class="float-card fc-2"><span>🛒</span>Carrefour<small>30–45 min</small></div>
+              <div class="float-card fc-3"><span>🧴</span>D.Watson<small>25–35 min</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container-xl">
+        <section class="home-block" aria-labelledby="catTitle">
+          <div class="block-head"><h2 id="catTitle">Shop by category</h2></div>
+          <div class="category-tiles" id="categoryTiles"></div>
+        </section>
+
+        <section class="home-block" id="orderAgainBlock" aria-labelledby="orderAgainTitle" hidden>
+          <div class="block-head"><h2 id="orderAgainTitle">Order again</h2><a href="#/orders" class="see-all">All orders</a></div>
+          <div class="h-scroll" id="orderAgainList"></div>
+        </section>
+
+        <section class="promo-banner" aria-labelledby="promoTitle">
+          <div class="promo-mangi" data-mangi="wave" aria-hidden="true"></div>
+          <div class="promo-copy">
+            <h2 id="promoTitle">Rs. 150 off your first basket</h2>
+            <p>Use code <strong>MANGO150</strong> at checkout. It's a demo code for this prototype — no real money involved.</p>
+          </div>
+          <button type="button" class="btn btn-dark promo-copy-btn" id="copyPromoBtn"><i class="bi bi-clipboard me-1" aria-hidden="true"></i>Copy code</button>
+        </section>
+
+        <section class="home-block" aria-labelledby="nearRestTitle">
+          <div class="block-head"><h2 id="nearRestTitle">Restaurants near you</h2><a href="#/restaurants" class="see-all">See all</a></div>
+          <div class="h-scroll" id="homeRestaurants"></div>
+        </section>
+
+        <section class="home-block" aria-labelledby="nearShopTitle">
+          <div class="block-head"><h2 id="nearShopTitle">Shops and supermarkets</h2><a href="#/shops" class="see-all">See all</a></div>
+          <div class="h-scroll" id="homeShops"></div>
+        </section>
+
+        <section class="home-block" aria-labelledby="popularTitle">
+          <div class="block-head"><h2 id="popularTitle">Popular right now</h2><a href="#/browse" class="see-all">Browse everything</a></div>
+          <div class="chip-row" id="popularChips" role="group" aria-label="Filter popular items by category"></div>
+          <div class="product-grid" id="popularGrid"></div>
+        </section>
+
+        <section class="value-strip" aria-label="Why Mangao">
+          <div class="value-item"><i class="bi bi-receipt-cutoff" aria-hidden="true"></i><div><h3>Every rupee itemised</h3><p>Subtotal, delivery fee, tip and discounts shown separately before you pay.</p></div></div>
+          <div class="value-item"><i class="bi bi-basket3" aria-hidden="true"></i><div><h3>One basket, many places</h3><p>Add a burger from NY212 and milk from Carrefour to the same checkout.</p></div></div>
+          <div class="value-item"><i class="bi bi-signpost-split" aria-hidden="true"></i><div><h3>Clear order progress</h3><p>Four simple steps from received to completed, with help one tap away.</p></div></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ============================ RESTAURANTS / SHOPS ============================ -->
+    <section class="view" data-view="vendors" aria-labelledby="vendorsTitle" hidden>
+      <div class="container-xl page-pad">
+        <div class="page-head">
+          <div>
+            <h1 id="vendorsTitle">Restaurants</h1>
+            <p class="page-sub" id="vendorsSub"></p>
+          </div>
+          <div class="sort-wrap">
+            <label for="vendorSort" class="form-label small mb-1">Sort by</label>
+            <select id="vendorSort" class="form-select">
+              <option value="recommended">Recommended</option>
+              <option value="fastest">Fastest delivery</option>
+              <option value="rating">Top rated</option>
+              <option value="fee">Lowest delivery fee</option>
+            </select>
+          </div>
+        </div>
+        <div class="chip-row" id="vendorKindChips" role="group" aria-label="Filter by type"></div>
+        <div class="toggle-row" role="group" aria-label="More filters">
+          <button type="button" class="toggle-chip" data-vfilter="lowFee" aria-pressed="false"><i class="bi bi-truck" aria-hidden="true"></i>Delivery under Rs. 100</button>
+          <button type="button" class="toggle-chip" data-vfilter="topRated" aria-pressed="false"><i class="bi bi-star" aria-hidden="true"></i>Rated 4.5+</button>
+          <button type="button" class="toggle-chip" data-vfilter="fast" aria-pressed="false"><i class="bi bi-lightning" aria-hidden="true"></i>Under 30 min</button>
+        </div>
+        <p class="result-count" id="vendorCount" aria-live="polite"></p>
+        <div class="vendor-grid" id="vendorGrid"></div>
+      </div>
+    </section>
+
+    <!-- ============================ VENDOR DETAIL ============================ -->
+    <section class="view" data-view="vendor" aria-labelledby="vendorName" hidden>
+      <div class="vendor-hero" id="vendorHero"></div>
+      <div class="container-xl vendor-layout">
+        <div class="vendor-main">
+          <div class="vendor-tools">
+            <div class="chip-row sticky-sections" id="vendorSections" role="navigation" aria-label="Menu sections"></div>
+            <div class="inline-search">
+              <label for="vendorSearch" class="visually-hidden">Search this menu</label>
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input type="search" id="vendorSearch" class="form-control" placeholder="Search this menu">
+            </div>
+          </div>
+          <div id="vendorMenu"></div>
+        </div>
+        <aside class="vendor-side" aria-label="Basket summary">
+          <div class="side-basket" id="sideBasket"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============================ BROWSE / SEARCH ============================ -->
+    <section class="view" data-view="browse" aria-labelledby="browseTitle" hidden>
+      <div class="container-xl page-pad">
+        <div class="page-head">
+          <div>
+            <h1 id="browseTitle">Browse everything</h1>
+            <p class="page-sub">Search across every restaurant and shop at once.</p>
+          </div>
+          <div class="sort-wrap">
+            <label for="productSort" class="form-label small mb-1">Sort by</label>
+            <select id="productSort" class="form-select">
+              <option value="relevance">Relevance</option>
+              <option value="priceAsc">Price: low to high</option>
+              <option value="priceDesc">Price: high to low</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </div>
+        </div>
+        <form class="browse-search" role="search" id="browseSearchForm">
+          <label for="browseSearch" class="form-label">Search products, categories and places</label>
+          <div class="browse-search-field">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" id="browseSearch" class="form-control form-control-lg" placeholder="e.g. zinger, eggs, shampoo" autocomplete="off">
+            <button type="button" class="btn btn-link search-clear-lg" id="browseSearchClear" hidden>Clear</button>
+          </div>
+        </form>
+        <div class="chip-row" id="browseChips" role="group" aria-label="Filter by category"></div>
+        <div id="browseVendorsWrap" hidden>
+          <h2 class="h6 mt-3 mb-2">Matching places</h2>
+          <div class="h-scroll compact" id="browseVendors"></div>
+        </div>
+        <p class="result-count" id="browseCount" aria-live="polite"></p>
+        <div class="product-grid" id="browseGrid"></div>
+      </div>
+    </section>
+
+    <!-- ============================ CHECKOUT ============================ -->
+    <section class="view" data-view="checkout" aria-labelledby="checkoutTitle" hidden>
+      <div class="container-xl page-pad">
+        <a href="#/" class="back-link" id="checkoutBack"><i class="bi bi-arrow-left" aria-hidden="true"></i> Keep shopping</a>
+        <h1 id="checkoutTitle" class="mt-2">Checkout</h1>
+        <div id="checkoutEmpty"></div>
+        <div class="checkout-grid" id="checkoutGrid">
+          <form id="checkoutForm" novalidate>
+            <div class="form-error-summary" id="checkoutErrors" role="alert" tabindex="-1" hidden></div>
+
+            <fieldset class="panel">
+              <legend class="panel-title"><span class="step-no" aria-hidden="true">1</span>How do you want it?</legend>
+              <div class="mode-cards" role="radiogroup" aria-label="Order mode">
+                <label class="mode-card"><input type="radio" name="coMode" value="delivery"><span><i class="bi bi-bicycle" aria-hidden="true"></i><strong>Delivery</strong><small>To your door</small></span></label>
+                <label class="mode-card"><input type="radio" name="coMode" value="pickup"><span><i class="bi bi-bag" aria-hidden="true"></i><strong>Pickup</strong><small>Collect it yourself, no delivery fee</small></span></label>
+              </div>
+              <div id="deliveryFields" class="mt-3">
+                <div class="mb-3">
+                  <label for="coAddress" class="form-label">Delivery address <span class="req">required</span></label>
+                  <textarea id="coAddress" class="form-control" rows="2" maxlength="200" placeholder="House no., street, block" aria-describedby="coAddressHelp coAddressErr"></textarea>
+                  <div class="form-text" id="coAddressHelp">Pick a saved address or type a new one.</div>
+                  <div class="invalid-feedback" id="coAddressErr"></div>
+                  <div class="saved-addr-row" id="savedAddrPicker" aria-label="Saved addresses"></div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-sm-6">
+                    <label for="coArea" class="form-label">Area <span class="req">required</span></label>
+                    <select id="coArea" class="form-select" aria-describedby="coAreaErr"><option value="">Choose an area</option></select>
+                    <div class="invalid-feedback" id="coAreaErr"></div>
+                  </div>
+                  <div class="col-sm-6">
+                    <label for="coRiderNote" class="form-label">Note for rider <span class="opt">optional</span></label>
+                    <input id="coRiderNote" class="form-control" maxlength="80" placeholder="e.g. Ring the bell twice">
+                  </div>
+                </div>
+              </div>
+              <div id="pickupFields" class="mt-3" hidden>
+                <div class="pickup-info" id="pickupInfo"></div>
+                <label for="coPickupNote" class="form-label mt-2">Pickup note <span class="opt">optional</span></label>
+                <input id="coPickupNote" class="form-control" maxlength="80" placeholder="e.g. I'll arrive in a white car">
+              </div>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend class="panel-title"><span class="step-no" aria-hidden="true">2</span>Your details</legend>
+              <div class="row g-3">
+                <div class="col-12">
+                  <label for="coName" class="form-label">Full name <span class="req">required</span></label>
+                  <input id="coName" class="form-control" autocomplete="name" maxlength="60" aria-describedby="coNameErr">
+                  <div class="invalid-feedback" id="coNameErr"></div>
+                </div>
+                <div class="col-sm-6">
+                  <label for="coPhone" class="form-label">Mobile number</label>
+                  <input id="coPhone" class="form-control" type="tel" inputmode="tel" autocomplete="tel" placeholder="03XX XXXXXXX" aria-describedby="coPhoneErr coContactHelp">
+                  <div class="invalid-feedback" id="coPhoneErr"></div>
+                </div>
+                <div class="col-sm-6">
+                  <label for="coEmail" class="form-label">Email</label>
+                  <input id="coEmail" class="form-control" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="coEmailErr coContactHelp">
+                  <div class="invalid-feedback" id="coEmailErr"></div>
+                </div>
+                <div class="col-12"><div class="form-text mt-0" id="coContactHelp">Give at least one way to reach you — a mobile number or an email.</div></div>
+              </div>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend class="panel-title"><span class="step-no" aria-hidden="true">3</span>When and how to pay</legend>
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label for="coWhen" class="form-label">When</label>
+                  <select id="coWhen" class="form-select"></select>
+                </div>
+                <div class="col-sm-6">
+                  <span class="form-label d-block" id="payLabel">Payment method</span>
+                  <div class="pay-options" role="radiogroup" aria-labelledby="payLabel">
+                    <label class="pay-opt"><input type="radio" name="coPay" value="Cash" checked><span><i class="bi bi-cash-stack" aria-hidden="true"></i>Cash</span></label>
+                    <label class="pay-opt"><input type="radio" name="coPay" value="Card (demo)"><span><i class="bi bi-credit-card" aria-hidden="true"></i>Card</span></label>
+                    <label class="pay-opt"><input type="radio" name="coPay" value="Wallet (demo)"><span><i class="bi bi-phone" aria-hidden="true"></i>Wallet</span></label>
+                  </div>
+                </div>
+                <div class="col-12"><p class="demo-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Payments are not processed in this prototype and no card details are collected.</p></div>
+                <div class="col-12" id="tipWrap">
+                  <span class="form-label d-block" id="tipLabel">Tip your rider <span class="opt">optional, 100% goes to them in a real launch</span></span>
+                  <div class="tip-row" role="radiogroup" aria-labelledby="tipLabel" id="tipRow"></div>
+                </div>
+                <div class="col-12">
+                  <label for="coNotes" class="form-label">Order notes <span class="opt">optional</span></label>
+                  <textarea id="coNotes" class="form-control" rows="2" maxlength="200" placeholder="e.g. No onions in the burger" aria-describedby="coNotesCount"></textarea>
+                  <div class="form-text text-end" id="coNotesCount">0 / 200</div>
+                </div>
+              </div>
+            </fieldset>
+          </form>
+
+          <aside class="panel summary-panel" aria-labelledby="summaryTitle">
+            <h2 id="summaryTitle" class="panel-title">Order summary</h2>
+            <div id="checkoutSummary"></div>
+            <div class="promo-form mt-3">
+              <label for="coPromo" class="form-label">Promo code</label>
+              <div class="input-group">
+                <input id="coPromo" class="form-control text-uppercase" placeholder="MANGO150" aria-describedby="coPromoMsg">
+                <button type="button" class="btn btn-outline-dark" data-promo-apply="coPromo">Apply</button>
+              </div>
+              <div class="promo-msg" id="coPromoMsg" aria-live="polite"></div>
+            </div>
+            <button type="submit" form="checkoutForm" class="btn btn-mango btn-lg w-100 mt-3" id="placeOrderBtn">Place demo order</button>
+            <p class="tiny-note">This creates a local demo order only. No restaurant or shop receives it.</p>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ ORDERS ============================ -->
+    <section class="view" data-view="orders" aria-labelledby="ordersTitle" hidden>
+      <div class="container-xl page-pad narrow">
+        <h1 id="ordersTitle">Your orders</h1>
+        <div class="seg-tabs" role="tablist" aria-label="Order lists">
+          <button type="button" role="tab" class="seg-tab" id="tabActive" aria-controls="ordersActive" aria-selected="true" data-otab="active">Active <span class="seg-count" id="activeCount">0</span></button>
+          <button type="button" role="tab" class="seg-tab" id="tabPast" aria-controls="ordersPast" aria-selected="false" data-otab="past">History <span class="seg-count" id="pastCount">0</span></button>
+        </div>
+        <div id="ordersActive" role="tabpanel" aria-labelledby="tabActive"></div>
+        <div id="ordersPast" role="tabpanel" aria-labelledby="tabPast" hidden></div>
+      </div>
+    </section>
+
+    <!-- ============================ TRACKING ============================ -->
+    <section class="view" data-view="track" aria-labelledby="trackTitle" hidden>
+      <div class="container-xl page-pad narrow">
+        <a href="#/orders" class="back-link"><i class="bi bi-arrow-left" aria-hidden="true"></i> All orders</a>
+        <div id="trackBody"></div>
+      </div>
+    </section>
+
+    <!-- ============================ FAVOURITES ============================ -->
+    <section class="view" data-view="favourites" aria-labelledby="favTitle" hidden>
+      <div class="container-xl page-pad">
+        <h1 id="favTitle">Favourites</h1>
+        <div class="seg-tabs" role="tablist" aria-label="Favourite lists">
+          <button type="button" role="tab" class="seg-tab" id="tabFavItems" aria-controls="favItems" aria-selected="true" data-ftab="items">Items <span class="seg-count" id="favItemsCount">0</span></button>
+          <button type="button" role="tab" class="seg-tab" id="tabFavPlaces" aria-controls="favPlaces" aria-selected="false" data-ftab="places">Places <span class="seg-count" id="favPlacesCount">0</span></button>
+        </div>
+        <div id="favItems" role="tabpanel" aria-labelledby="tabFavItems"></div>
+        <div id="favPlaces" role="tabpanel" aria-labelledby="tabFavPlaces" hidden></div>
+      </div>
+    </section>
+
+    <!-- ============================ ACCOUNT / PROFILE ============================ -->
+    <section class="view" data-view="account" aria-labelledby="accountTitle" hidden>
+      <div class="container-xl page-pad narrow">
+        <div class="profile-card">
+          <span class="avatar avatar-xl" id="profileAvatar">G</span>
+          <div>
+            <h1 id="accountTitle" class="mb-0">Guest</h1>
+            <p class="page-sub mb-0" id="profileContact">Add your details to speed up checkout</p>
+          </div>
+        </div>
+        <div class="stat-row" id="profileStats"></div>
+
+        <div class="account-links">
+          <a href="#/orders"><i class="bi bi-receipt" aria-hidden="true"></i>Orders<i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+          <a href="#/favourites"><i class="bi bi-heart" aria-hidden="true"></i>Favourites<i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+          <a href="#/settings"><i class="bi bi-gear" aria-hidden="true"></i>Settings<i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+          <a href="#/help"><i class="bi bi-life-preserver" aria-hidden="true"></i>Help &amp; support<i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+        </div>
+
+        <form class="panel" id="profileForm" novalidate aria-labelledby="profileFormTitle">
+          <h2 class="panel-title" id="profileFormTitle">Personal details</h2>
+          <div class="row g-3">
+            <div class="col-12">
+              <label for="pfName" class="form-label">Full name <span class="req">required</span></label>
+              <input id="pfName" class="form-control" maxlength="60" autocomplete="name" aria-describedby="pfNameErr">
+              <div class="invalid-feedback" id="pfNameErr"></div>
+            </div>
+            <div class="col-sm-6">
+              <label for="pfPhone" class="form-label">Mobile number</label>
+              <input id="pfPhone" class="form-control" type="tel" placeholder="03XX XXXXXXX" aria-describedby="pfPhoneErr">
+              <div class="invalid-feedback" id="pfPhoneErr"></div>
+            </div>
+            <div class="col-sm-6">
+              <label for="pfEmail" class="form-label">Email</label>
+              <input id="pfEmail" class="form-control" type="email" placeholder="you@example.com" aria-describedby="pfEmailErr">
+              <div class="invalid-feedback" id="pfEmailErr"></div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-dark mt-3">Save details</button>
+          <span class="save-status" id="profileSaved" aria-live="polite"></span>
+        </form>
+
+        <section class="panel" aria-labelledby="addrTitle">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="panel-title mb-0" id="addrTitle">Saved addresses</h2>
+            <button type="button" class="btn btn-sm btn-outline-dark" id="addAddressToggle" aria-expanded="false" aria-controls="addressForm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add address</button>
+          </div>
+          <form id="addressForm" class="address-form" novalidate hidden>
+            <div class="row g-2">
+              <div class="col-sm-4">
+                <label for="adLabel" class="form-label">Label</label>
+                <select id="adLabel" class="form-select"><option>Home</option><option>Work</option><option>University</option><option>Other</option></select>
+              </div>
+              <div class="col-sm-8">
+                <label for="adArea" class="form-label">Area <span class="req">required</span></label>
+                <select id="adArea" class="form-select" aria-describedby="adAreaErr"><option value="">Choose an area</option></select>
+                <div class="invalid-feedback" id="adAreaErr"></div>
+              </div>
+              <div class="col-12">
+                <label for="adLine" class="form-label">Street address <span class="req">required</span></label>
+                <input id="adLine" class="form-control" maxlength="120" placeholder="House no., street, block" aria-describedby="adLineErr">
+                <div class="invalid-feedback" id="adLineErr"></div>
+              </div>
+            </div>
+            <div class="mt-2 d-flex gap-2">
+              <button type="submit" class="btn btn-dark btn-sm">Save address</button>
+              <button type="button" class="btn btn-link btn-sm text-body" id="cancelAddress">Cancel</button>
+            </div>
+          </form>
+          <ul class="address-list" id="addressList"></ul>
+        </section>
+      </div>
+    </section>
+
+    <!-- ============================ SETTINGS ============================ -->
+    <section class="view" data-view="settings" aria-labelledby="settingsTitle" hidden>
+      <div class="container-xl page-pad narrow">
+        <a href="#/account" class="back-link"><i class="bi bi-arrow-left" aria-hidden="true"></i> Account</a>
+        <h1 id="settingsTitle" class="mt-2">Settings</h1>
+
+        <section class="panel" aria-labelledby="setAppearance">
+          <h2 class="panel-title" id="setAppearance">Appearance</h2>
+          <div class="setting-row">
+            <div><label for="setTheme" class="setting-name">Theme</label><p class="setting-desc">Choose how Mangao looks on this device.</p></div>
+            <select id="setTheme" class="form-select w-auto"><option value="light">Light</option><option value="dark">Dark</option><option value="system">Match device</option></select>
+          </div>
+          <div class="setting-row">
+            <div><label for="setPhotos" class="setting-name">Show product photos</label><p class="setting-desc">Turn off to use light illustrations and save mobile data.</p></div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="setPhotos"></div>
+          </div>
+          <div class="setting-row">
+            <div><label for="setMotion" class="setting-name">Reduce motion</label><p class="setting-desc">Turns off animations and smooth scrolling.</p></div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="setMotion"></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="setOrdering">
+          <h2 class="panel-title" id="setOrdering">Ordering</h2>
+          <div class="setting-row">
+            <div><label for="setDefaultMode" class="setting-name">Default order mode</label><p class="setting-desc">Used each time you open Mangao.</p></div>
+            <select id="setDefaultMode" class="form-select w-auto"><option value="delivery">Delivery</option><option value="pickup">Pickup</option></select>
+          </div>
+          <div class="setting-row">
+            <div><label for="setTip" class="setting-name">Default rider tip</label><p class="setting-desc">Pre-selected at checkout. You can change it each time.</p></div>
+            <select id="setTip" class="form-select w-auto"><option value="0">No tip</option><option value="50">Rs. 50</option><option value="100">Rs. 100</option><option value="150">Rs. 150</option></select>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="setNotifs">
+          <h2 class="panel-title" id="setNotifs">Notifications</h2>
+          <div class="setting-row">
+            <div><label for="setNotifOrder" class="setting-name">Order progress alerts</label><p class="setting-desc">Shows an in-app message when a demo order moves to its next step.</p></div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="setNotifOrder"></div>
+          </div>
+          <div class="setting-row">
+            <div><label for="setNotifPromo" class="setting-name">Offers and deals</label><p class="setting-desc">Saved as a preference only — the prototype sends no messages.</p></div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="setNotifPromo"></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="setData">
+          <h2 class="panel-title" id="setData">Your data</h2>
+          <p class="setting-desc">Mangao keeps your basket, favourites, profile and demo orders in this browser only (localStorage). Nothing is sent to a server.</p>
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            <button type="button" class="btn btn-outline-dark" id="exportDataBtn"><i class="bi bi-download me-1" aria-hidden="true"></i>Download my data</button>
+            <button type="button" class="btn btn-outline-danger" id="resetDataBtn"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Reset all demo data</button>
+          </div>
+        </section>
+        <p class="tiny-note text-center">Mangao prototype v1.0 · Web Technologies midterm build</p>
+      </div>
+    </section>
+
+    <!-- ============================ HELP ============================ -->
+    <section class="view" data-view="help" aria-labelledby="helpTitle" hidden>
+      <div class="container-xl page-pad">
+        <div class="help-head">
+          <div class="help-mangi" data-mangi="help" aria-hidden="true"></div>
+          <div>
+            <h1 id="helpTitle">How can we help?</h1>
+            <p class="page-sub">Support in this prototype is simulated: reports stay in your browser and the chat replies are pre-written.</p>
+          </div>
+        </div>
+
+        <div class="help-grid">
+          <div>
+            <section class="panel" aria-labelledby="reportTitle">
+              <h2 class="panel-title" id="reportTitle">Report an issue</h2>
+              <form id="supportForm" novalidate>
+                <div class="form-error-summary" id="supportErrors" role="alert" tabindex="-1" hidden></div>
+                <div class="mb-3">
+                  <label for="spType" class="form-label">What's it about? <span class="req">required</span></label>
+                  <select id="spType" class="form-select" aria-describedby="spTypeErr"><option value="">Choose an issue type</option></select>
+                  <div class="invalid-feedback" id="spTypeErr"></div>
+                </div>
+                <div class="mb-3">
+                  <label for="spOrder" class="form-label">Related order <span class="opt">optional</span></label>
+                  <select id="spOrder" class="form-select"><option value="">Not about a specific order</option></select>
+                </div>
+                <div class="mb-3">
+                  <label for="spDesc" class="form-label">Describe the problem <span class="req">required</span></label>
+                  <textarea id="spDesc" class="form-control" rows="4" maxlength="500" placeholder="Tell us what happened and what you expected" aria-describedby="spDescErr spDescCount"></textarea>
+                  <div class="d-flex justify-content-between"><div class="invalid-feedback d-block" id="spDescErr"></div><div class="form-text ms-auto flex-shrink-0 ps-2" id="spDescCount">0 / 500</div></div>
+                </div>
+                <button type="submit" class="btn btn-dark">Submit report</button>
+              </form>
+              <div id="supportConfirm" aria-live="polite"></div>
+              <div id="supportCases"></div>
+            </section>
+
+            <section class="panel" aria-labelledby="faqTitle">
+              <h2 class="panel-title" id="faqTitle">Common questions</h2>
+              <div class="accordion accordion-flush" id="faq"></div>
+            </section>
+          </div>
+
+          <section class="panel chat-panel" aria-labelledby="chatTitle">
+            <div class="chat-head">
+              <span class="chat-avatar" data-mangi="mark" aria-hidden="true"></span>
+              <div><h2 class="panel-title mb-0" id="chatTitle">Chat with Mangi</h2><small class="text-body-secondary">Demo assistant · pre-written replies</small></div>
+            </div>
+            <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="Chat messages"></div>
+            <div class="chat-quick" id="chatQuick" aria-label="Suggested questions"></div>
+            <form class="chat-input" id="chatForm">
+              <label for="chatInput" class="visually-hidden">Type a message</label>
+              <input id="chatInput" class="form-control" maxlength="200" placeholder="Type a message" autocomplete="off">
+              <button type="submit" class="btn btn-mango" aria-label="Send message"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
+            </form>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ NOT FOUND ============================ -->
+    <section class="view" data-view="notfound" aria-labelledby="nfTitle" hidden>
+      <div class="container-xl page-pad">
+        <div class="empty-state">
+          <div class="empty-mangi" data-mangi="sad" aria-hidden="true"></div>
+          <h1 id="nfTitle" class="h3">This page doesn't exist</h1>
+          <p>The link may be old or mistyped.</p>
+          <a href="#/" class="btn btn-mango">Go to home</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================ FOOTER ============================ -->
+  <footer class="app-footer">
+    <div class="container-xl footer-grid">
+      <div>
+        <a href="#/" class="brand brand-footer" aria-label="Mangao home"><span class="brand-mark" data-mangi="mark" aria-hidden="true"></span><span class="brand-name">Mangao</span></a>
+        <p class="footer-desc">Food, groceries and everyday essentials in one basket. Order it. Get it.</p>
+      </div>
+      <nav aria-label="Footer: browse">
+        <h2 class="footer-h">Browse</h2>
+        <ul>
+          <li><a href="#/browse?cat=food">Food</a></li>
+          <li><a href="#/browse?cat=groceries">Groceries</a></li>
+          <li><a href="#/browse?cat=essentials">Everyday Essentials</a></li>
+          <li><a href="#/restaurants">Restaurants</a></li>
+          <li><a href="#/shops">Shops</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Footer: account">
+        <h2 class="footer-h">Account</h2>
+        <ul>
+          <li><a href="#/orders">Orders</a></li>
+          <li><a href="#/favourites">Favourites</a></li>
+          <li><a href="#/account">Profile</a></li>
+          <li><a href="#/settings">Settings</a></li>
+          <li><a href="#/help">Help &amp; support</a></li>
+        </ul>
+      </nav>
+      <div class="footer-disclaimer">
+        <h2 class="footer-h">About this prototype</h2>
+        <p>Mangao is a student frontend project. Restaurant and shop names, menus and prices are sample data with no affiliation or partnership. No real orders, payments, deliveries or support agents are involved.</p>
+      </div>
+    </div>
+    <div class="container-xl footer-base">© 2026 Mangao · Built with HTML, CSS, Bootstrap 5 and vanilla JavaScript</div>
+  </footer>
+
+  <!-- ============================ MOBILE BOTTOM NAV ============================ -->
+  <div class="basket-bar" id="basketBar" hidden>
+    <button type="button" class="basket-bar-btn" data-bs-toggle="offcanvas" data-bs-target="#cartPanel" aria-controls="cartPanel">
+      <span class="bb-count" id="bbCount">0</span>
+      <span class="bb-label">View basket</span>
+      <span class="bb-total" id="bbTotal">Rs. 0</span>
+    </button>
+  </div>
+  <nav class="bottom-nav" aria-label="Mobile">
+    <a href="#/" data-tab="home"><i class="bi bi-house-door" aria-hidden="true"></i><span>Home</span></a>
+    <a href="#/browse" data-tab="browse"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></a>
+    <a href="#/orders" data-tab="orders"><i class="bi bi-receipt" aria-hidden="true"></i><span>Orders</span></a>
+    <a href="#/favourites" data-tab="favourites"><i class="bi bi-heart" aria-hidden="true"></i><span>Saved</span></a>
+    <a href="#/account" data-tab="account"><i class="bi bi-person" aria-hidden="true"></i><span>Account</span></a>
+  </nav>
+
+  <!-- ============================ CART OFFCANVAS ============================ -->
+  <div class="offcanvas offcanvas-end cart-panel" tabindex="-1" id="cartPanel" aria-labelledby="cartTitle">
+    <div class="offcanvas-header">
+      <div>
+        <h2 class="offcanvas-title h5" id="cartTitle">Your basket</h2>
+        <small class="text-body-secondary" id="cartModeNote"></small>
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close basket"></button>
+    </div>
+    <div class="offcanvas-body" id="cartBody"></div>
+    <div class="cart-footer" id="cartFooter"></div>
+  </div>
+
+  <!-- ============================ MODALS ============================ -->
+  <div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="pmTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content product-modal" id="productModalContent"></div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="addressModal" tabindex="-1" aria-labelledby="amTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="amTitle">Where should we deliver?</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="addressModalList" role="radiogroup" aria-label="Saved addresses"></div>
+          <a href="#/account" class="btn btn-outline-dark w-100 mt-3" id="manageAddrLink"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add or manage addresses</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="cmTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-body">
+          <h2 class="h5" id="cmTitle">Are you sure?</h2>
+          <p id="cmText" class="mb-0"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link text-body" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-dark" id="cmConfirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed" id="toastStack"></div>
+  <div class="visually-hidden" id="liveRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
